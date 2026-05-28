@@ -1,6 +1,6 @@
 # ModMail (Node.js + discord.js + Components V2)
 
-Bot ModMail base sur `discord.js` avec stockage JSON local.
+ModMail bot built with `discord.js` and local JSON storage.
 
 ## Stack
 
@@ -17,45 +17,50 @@ npm install
 
 ## Configuration
 
-1. Copier `.env.example` vers `.env`
-2. Remplir les valeurs
+1. Copy `.env.example` to `.env`
+2. Fill in the values
 
-Variables obligatoires:
+Required variables:
 
 - `DISCORD_TOKEN`
 - `MODMAIL_GUILD_ID`
-- `MODMAIL_THREADS_CHANNEL_ID` (doit etre un salon texte classique `GuildText`)
+- `MODMAIL_THREADS_CHANNEL_ID` (must be a regular text channel: `GuildText`)
 
-Variables optionnelles:
+Optional variables:
 
-- `STAFF_ROLE_ID` (recommande pour mentionner le staff a l ouverture du ticket)
+- `STAFF_ROLE_ID` (recommended, used to mention staff when a ticket opens)
+- `BOT_ACTIVITY_PLAYING` (sets the bot status as **Playing ...**)
 - `THREAD_AUTO_ARCHIVE_MINUTES` (`60`, `1440`, `4320`, `10080`)
-- `MODMAIL_DB_FILE` (defaut `./data/modmail.json`)
+- `MODMAIL_DB_FILE` (default: `./data/modmail.json`)
 
-## Lancer
+Example:
+
+- `BOT_ACTIVITY_PLAYING=your ModMail tickets` -> profile shows `Playing your ModMail tickets`
+
+## Run
 
 ```bash
 npm start
 ```
 
-## Fonctionnement
+## Behavior
 
-- Un utilisateur envoie un DM au bot -> le bot envoie d abord une annonce dans `MODMAIL_THREADS_CHANNEL_ID` (avec mention du role staff si configure), puis cree le thread
-- Les messages utilisateur sont relayes dans le thread
-- Les messages staff dans le thread sont relayes en DM vers l utilisateur
-- Un panneau Components V2 est poste dans chaque thread avec boutons:
-  - Close ticket (ouvre une modal pour saisir la raison)
-  - Block user
-  - Unblock user
+- A user sends a DM to the bot -> the bot posts an announcement in `MODMAIL_THREADS_CHANNEL_ID` (with staff role mention if configured), then creates a thread
+- User messages are relayed into the thread
+- Staff messages in the thread are relayed to the user via DM
+- A Components V2 control panel is posted in each thread with buttons:
+- `Close ticket` (opens a modal to enter a reason)
+- `Block user`
+- `Unblock user`
 
-## Slash commands staff (dans un thread ModMail)
+## Staff Slash Commands (inside a ModMail thread)
 
 - `/close [reason]`
 - `/block [reason]`
 - `/unblock`
 - `/help`
 
-## Permissions bot recommandees
+## Recommended Bot Permissions
 
 - View Channels
 - Send Messages
@@ -64,6 +69,6 @@ npm start
 - Manage Threads
 - Read Message History
 - Attach Files
-- Use External Emojis (optionnel)
-- Message Content intent active (Developer Portal)
-- Server Members intent non requis
+- Use External Emojis (optional)
+- Message Content intent enabled (Developer Portal)
+- Server Members intent not required

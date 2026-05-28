@@ -19,6 +19,7 @@ const config = {
   guildId: process.env.MODMAIL_GUILD_ID,
   threadsChannelId: process.env.MODMAIL_THREADS_CHANNEL_ID,
   staffRoleId: process.env.STAFF_ROLE_ID || null,
+  botActivityPlaying: process.env.BOT_ACTIVITY_PLAYING?.trim() || null,
   threadAutoArchiveMinutes: allowedAutoArchive.has(parsedAutoArchive) ? parsedAutoArchive : 1440,
   dbFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
 };
