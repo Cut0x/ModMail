@@ -1,0 +1,4 @@
+node_modules/
+.env
+data/modmail.json
+npm-debug.log*
