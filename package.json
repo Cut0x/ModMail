@@ -1,0 +1,30 @@
+{
+  "name": "modmail",
+  "version": "1.0.0",
+  "description": "Discord ModMail bot with discord.js and JSON storage.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cut0x/ModMail.git"
+  },
+  "keywords": [
+    "discord",
+    "modmail",
+    "discord.js"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Cut0x/ModMail/issues"
+  },
+  "homepage": "https://github.com/Cut0x/ModMail#readme",
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2"
+  }
+}
