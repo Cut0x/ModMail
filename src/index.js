@@ -1,5 +1,6 @@
 const {
   ActionRowBuilder,
+  ActivityType,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
@@ -453,11 +454,19 @@ client.once('ready', async () => {
 
   await getModmailParentChannel();
   await registerSlashCommands(guild);
+  if (config.botActivityPlaying && client.user) {
+    client.user.setActivity(config.botActivityPlaying, {
+      type: ActivityType.Playing,
+    });
+  }
 
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`ModMail guild: ${guild.name} (${guild.id})`);
   console.log(`JSON DB: ${db.dbPath}`);
   console.log('Slash commands registered: /close, /block, /unblock, /help');
+  if (config.botActivityPlaying) {
+    console.log(`Bot activity: Playing ${config.botActivityPlaying}`);
+  }
 });
 
 client.on('messageCreate', async (message) => {
