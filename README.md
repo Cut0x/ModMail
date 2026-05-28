@@ -5,7 +5,7 @@ Bot ModMail base sur `discord.js` avec stockage JSON local.
 ## Stack
 
 - Node.js
-- discord.js `14.26.4` (version npm `latest` verifiee le 2026-05-28)
+- discord.js `14.26.4`
 - Discord Components V2 (`MessageFlags.IsComponentsV2` + `ContainerBuilder`)
 - JSON database (`data/modmail.json`)
 
@@ -29,7 +29,6 @@ Variables obligatoires:
 Variables optionnelles:
 
 - `STAFF_ROLE_ID` (recommande pour mentionner le staff a l ouverture du ticket)
-- `MODMAIL_PREFIX` (defaut `!`)
 - `THREAD_AUTO_ARCHIVE_MINUTES` (`60`, `1440`, `4320`, `10080`)
 - `MODMAIL_DB_FILE` (defaut `./data/modmail.json`)
 
@@ -49,12 +48,12 @@ npm start
   - Block user
   - Unblock user
 
-## Commandes staff (dans un thread ModMail)
+## Slash commands staff (dans un thread ModMail)
 
-- `!close [reason]`
-- `!block [reason]`
-- `!unblock`
-- `!help`
+- `/close [reason]`
+- `/block [reason]`
+- `/unblock`
+- `/help`
 
 ## Permissions bot recommandees
 
