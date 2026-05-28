@@ -12,6 +12,7 @@ const {
   PermissionsBitField,
   SectionBuilder,
   SeparatorBuilder,
+  SlashCommandBuilder,
   TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -39,6 +40,7 @@ const client = new Client({
 const AUTO_ARCHIVE_VALUES = new Set([60, 1440, 4320, 10080]);
 const CLOSE_MODAL_PREFIX = 'modmail:closemodal';
 const CLOSE_REASON_INPUT_ID = 'close_reason';
+const STAFF_COMMAND_NAMES = new Set(['close', 'block', 'unblock', 'help']);
 
 const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
 
@@ -55,10 +57,26 @@ const isStaffMember = (member) => {
   if (!member) return false;
 
   if (config.staffRoleId) {
-    return member.roles.cache.has(config.staffRoleId);
+    if (member.roles?.cache?.has) {
+      return member.roles.cache.has(config.staffRoleId);
+    }
+
+    if (Array.isArray(member.roles)) {
+      return member.roles.includes(config.staffRoleId);
+    }
   }
 
-  return member.permissions.has(PermissionsBitField.Flags.ManageMessages);
+  if (member.permissions?.has) {
+    return member.permissions.has(PermissionsBitField.Flags.ManageMessages);
+  }
+
+  if (typeof member.permissions === 'string') {
+    return new PermissionsBitField(BigInt(member.permissions)).has(
+      PermissionsBitField.Flags.ManageMessages,
+    );
+  }
+
+  return false;
 };
 
 const isModmailThread = (channel) => {
@@ -156,6 +174,39 @@ const buildCloseReasonModal = ({ userId, threadId }) => {
     .addComponents(new ActionRowBuilder().addComponents(reasonInput));
 
   return modal;
+};
+
+const buildSlashCommands = () => [
+  new SlashCommandBuilder()
+    .setName('close')
+    .setDescription('Close the current ModMail ticket')
+    .addStringOption((option) =>
+      option
+        .setName('reason')
+        .setDescription('Reason shown to the user')
+        .setRequired(false)
+        .setMaxLength(1000),
+    ),
+  new SlashCommandBuilder()
+    .setName('block')
+    .setDescription('Block the ticket user from sending ModMail')
+    .addStringOption((option) =>
+      option
+        .setName('reason')
+        .setDescription('Optional block reason')
+        .setRequired(false)
+        .setMaxLength(1000),
+    ),
+  new SlashCommandBuilder()
+    .setName('unblock')
+    .setDescription('Unblock the ticket user for ModMail'),
+  new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Show available ModMail slash commands'),
+].map((command) => command.toJSON());
+
+const registerSlashCommands = async (guild) => {
+  await guild.commands.set(buildSlashCommands());
 };
 
 const ensureThreadForUser = async (user) => {
@@ -281,76 +332,6 @@ const handleStaffThreadMessage = async (message) => {
   if (!isModmailThread(message.channel)) return;
   if (!isStaffMember(message.member)) return;
 
-  const trimmed = message.content?.trim() || '';
-
-  if (trimmed.startsWith(config.prefix)) {
-    const [rawCommand, ...rest] = trimmed.slice(config.prefix.length).split(/\s+/);
-    const command = rawCommand?.toLowerCase();
-    const commandText = rest.join(' ').trim();
-
-    if (command === 'close') {
-      const reason = commandText || 'Closed by staff command.';
-      await closeTicket({
-        thread: message.channel,
-        closedBy: message.author.id,
-        reason,
-      });
-      return;
-    }
-
-    if (command === 'block') {
-      const userId = db.getUserIdByThreadId(message.channel.id);
-      if (!userId) {
-        await message.reply('No user linked to this thread.');
-        return;
-      }
-
-      await db.blockUser({
-        userId,
-        blockedBy: message.author.id,
-        reason: commandText || null,
-      });
-
-      const user = await client.users.fetch(userId).catch(() => null);
-      if (user) {
-        await sendStaffControlPanel({ thread: message.channel, user });
-      }
-
-      await message.reply(`User \`${userId}\` has been blocked.`);
-      return;
-    }
-
-    if (command === 'unblock') {
-      const userId = db.getUserIdByThreadId(message.channel.id);
-      if (!userId) {
-        await message.reply('No user linked to this thread.');
-        return;
-      }
-
-      await db.unblockUser(userId);
-
-      const user = await client.users.fetch(userId).catch(() => null);
-      if (user) {
-        await sendStaffControlPanel({ thread: message.channel, user });
-      }
-
-      await message.reply(`User \`${userId}\` has been unblocked.`);
-      return;
-    }
-
-    if (command === 'help') {
-      await message.reply(
-        [
-          `Available commands (${config.prefix}...):`,
-          `${config.prefix}close [reason]`,
-          `${config.prefix}block [reason]`,
-          `${config.prefix}unblock`,
-        ].join('\n'),
-      );
-      return;
-    }
-  }
-
   const userId = db.getUserIdByThreadId(message.channel.id);
   if (!userId) return;
 
@@ -373,6 +354,95 @@ const handleStaffThreadMessage = async (message) => {
   await db.touchTicketForUser(userId);
 };
 
+const handleStaffSlashCommand = async (interaction) => {
+  if (!interaction.inGuild()) return;
+  if (!STAFF_COMMAND_NAMES.has(interaction.commandName)) return;
+
+  if (!interaction.channel || !isModmailThread(interaction.channel)) {
+    await interaction.reply({
+      content: 'This command can only be used inside a ModMail thread.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (!isStaffMember(interaction.member)) {
+    await interaction.reply({
+      content: 'You are not allowed to use this command.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (interaction.commandName === 'help') {
+    await interaction.reply({
+      content: ['/close [reason]', '/block [reason]', '/unblock', '/help'].join('\n'),
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const userId = db.getUserIdByThreadId(interaction.channel.id);
+  if (!userId) {
+    await interaction.reply({
+      content: 'No user linked to this thread.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (interaction.commandName === 'close') {
+    const reason = interaction.options.getString('reason')?.trim() || 'Closed by staff command.';
+
+    const closed = await closeTicket({
+      thread: interaction.channel,
+      closedBy: interaction.user.id,
+      reason,
+    });
+
+    await interaction.reply({
+      content: closed ? `Ticket closed for user ${userId}.` : 'Unable to close ticket.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply({
+    flags: MessageFlags.Ephemeral,
+  });
+
+  if (interaction.commandName === 'block') {
+    await db.blockUser({
+      userId,
+      blockedBy: interaction.user.id,
+      reason: interaction.options.getString('reason')?.trim() || null,
+    });
+
+    const user = await client.users.fetch(userId).catch(() => null);
+    if (user) {
+      await sendStaffControlPanel({ thread: interaction.channel, user });
+    }
+
+    await interaction.editReply({
+      content: `User ${userId} has been blocked.`,
+    });
+    return;
+  }
+
+  if (interaction.commandName === 'unblock') {
+    await db.unblockUser(userId);
+
+    const user = await client.users.fetch(userId).catch(() => null);
+    if (user) {
+      await sendStaffControlPanel({ thread: interaction.channel, user });
+    }
+
+    await interaction.editReply({
+      content: `User ${userId} has been unblocked.`,
+    });
+  }
+};
+
 client.once('ready', async () => {
   await db.load();
 
@@ -382,10 +452,12 @@ client.once('ready', async () => {
   }
 
   await getModmailParentChannel();
+  await registerSlashCommands(guild);
 
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`ModMail guild: ${guild.name} (${guild.id})`);
   console.log(`JSON DB: ${db.dbPath}`);
+  console.log('Slash commands registered: /close, /block, /unblock, /help');
 });
 
 client.on('messageCreate', async (message) => {
@@ -413,6 +485,11 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
   try {
+    if (interaction.isChatInputCommand()) {
+      await handleStaffSlashCommand(interaction);
+      return;
+    }
+
     if (interaction.isButton() && interaction.customId.startsWith('modmail:')) {
       if (!interaction.channel || !isModmailThread(interaction.channel)) return;
 
