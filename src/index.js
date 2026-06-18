@@ -42,6 +42,11 @@ const AUTO_ARCHIVE_VALUES = new Set([60, 1440, 4320, 10080]);
 const CLOSE_MODAL_PREFIX = 'modmail:closemodal';
 const CLOSE_REASON_INPUT_ID = 'close_reason';
 const STAFF_COMMAND_NAMES = new Set(['close', 'block', 'unblock', 'help']);
+const CONFIRM_PREFIX = 'modmail:confirm';
+const SPAM_THRESHOLD = 3;
+
+// userId -> { confirmMessage: Message, originalContent: string, originalFiles: Array, spamCount: number }
+const pendingConfirmations = new Map();
 
 const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
 
@@ -134,6 +139,94 @@ const buildControlPanelMessage = ({ user, blocked }) => {
     flags: MessageFlags.IsComponentsV2,
     components: [container],
   };
+};
+
+const buildConfirmMessage = (userId) => {
+  const yesButton = new ButtonBuilder()
+    .setCustomId(`${CONFIRM_PREFIX}:yes:${userId}`)
+    .setLabel('Yes')
+    .setStyle(ButtonStyle.Success);
+
+  const noButton = new ButtonBuilder()
+    .setCustomId(`${CONFIRM_PREFIX}:no:${userId}`)
+    .setLabel('No')
+    .setStyle(ButtonStyle.Danger);
+
+  return {
+    content: 'Do you want to create a ticket with the staff team?',
+    components: [new ActionRowBuilder().addComponents(yesButton, noButton)],
+  };
+};
+
+const sendSpamIgnoreLog = async (user) => {
+  if (!config.logsIgnoredMpUserChannelId) return;
+  const channel = await client.channels.fetch(config.logsIgnoredMpUserChannelId).catch(() => null);
+  if (!channel) return;
+  await channel
+    .send({
+      content: `User **${user.tag}** (\`${user.id}\`) has been auto-ignored: sent ${SPAM_THRESHOLD + 1} DMs without responding to the ticket confirmation.`,
+      allowedMentions: { parse: [] },
+    })
+    .catch(() => null);
+};
+
+const handleConfirmationButton = async (interaction) => {
+  const parts = interaction.customId.split(':');
+  const action = parts[2];
+  const userId = parts[3];
+
+  if (interaction.user.id !== userId) {
+    await interaction
+      .reply({ content: 'This confirmation does not belong to you.', flags: MessageFlags.Ephemeral })
+      .catch(() => null);
+    return;
+  }
+
+  const pending = pendingConfirmations.get(userId);
+
+  if (!pending) {
+    await interaction.update({ content: 'This confirmation is no longer valid.', components: [] }).catch(() => null);
+    return;
+  }
+
+  if (action === 'no') {
+    pendingConfirmations.delete(userId);
+    await interaction.update({ content: 'Ticket creation cancelled.', components: [] }).catch(() => null);
+    return;
+  }
+
+  if (action === 'yes') {
+    if (db.isBlocked(userId) || db.isSpamIgnored(userId)) {
+      pendingConfirmations.delete(userId);
+      await interaction
+        .update({ content: 'You cannot create a ticket at this time.', components: [] })
+        .catch(() => null);
+      return;
+    }
+
+    pendingConfirmations.delete(userId);
+    await interaction.deferUpdate().catch(() => null);
+
+    const user = interaction.user;
+    const thread = await ensureThreadForUser(user);
+    await db.touchTicketForUser(user.id);
+
+    const ticket = db.getTicketByUserId(user.id);
+    if (ticket && !ticket.welcomed) {
+      ticket.welcomed = true;
+      await db.upsertTicket({ userId: user.id, threadId: ticket.threadId, guildId: ticket.guildId });
+    }
+
+    await thread.send({
+      content: `**From ${user.tag}** (${user.id})\n${safeText(pending.originalContent)}`,
+      files: pending.originalFiles,
+      allowedMentions: { parse: [] },
+    });
+
+    await interaction
+      .editReply({ content: 'Your message has been sent to the staff team. We will reply here soon.', components: [] })
+      .catch(() => null);
+  }
 };
 
 const getModmailParentChannel = async () => {
@@ -293,40 +386,70 @@ const closeTicket = async ({ thread, closedBy, reason = 'No reason provided.' })
 };
 
 const handleDmMessage = async (message) => {
-  if (db.isBlocked(message.author.id)) {
-    await message.author
+  const { author } = message;
+
+  if (db.isSpamIgnored(author.id)) return;
+
+  if (db.isBlocked(author.id)) {
+    await author
       .send('You are currently blocked from this ModMail. Contact staff another way if needed.')
       .catch(() => null);
     return;
   }
 
-  const thread = await ensureThreadForUser(message.author);
-  await db.touchTicketForUser(message.author.id);
+  // If a ticket is already open, forward the message directly without confirmation.
+  if (db.getTicketByUserId(author.id)) {
+    const thread = await ensureThreadForUser(author);
+    await db.touchTicketForUser(author.id);
 
-  const files = attachmentFiles(message);
-  const content = safeText(message.content);
+    await thread.send({
+      content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}`,
+      files: attachmentFiles(message),
+      allowedMentions: { parse: [] },
+    });
 
-  await thread.send({
-    content: `**From ${message.author.tag}** (${message.author.id})\n${content}`,
-    files,
-    allowedMentions: { parse: [] },
-  });
+    if (!db.getTicketByUserId(author.id)?.welcomed) {
+      await author
+        .send('Your message has been sent to the staff team. We will reply here soon.')
+        .catch(() => null);
 
-  if (!db.getTicketByUserId(message.author.id)?.welcomed) {
-    await message.author
-      .send('Your message has been sent to the staff team. We will reply here soon.')
-      .catch(() => null);
-
-    const ticket = db.getTicketByUserId(message.author.id);
-    if (ticket) {
-      ticket.welcomed = true;
-      await db.upsertTicket({
-        userId: message.author.id,
-        threadId: ticket.threadId,
-        guildId: ticket.guildId,
-      });
+      const ticket = db.getTicketByUserId(author.id);
+      if (ticket) {
+        ticket.welcomed = true;
+        await db.upsertTicket({ userId: author.id, threadId: ticket.threadId, guildId: ticket.guildId });
+      }
     }
+
+    return;
   }
+
+  // No open ticket: go through the confirmation flow.
+  const pending = pendingConfirmations.get(author.id);
+
+  if (pending) {
+    pending.spamCount++;
+
+    if (pending.spamCount >= SPAM_THRESHOLD) {
+      pendingConfirmations.delete(author.id);
+      await db.addSpamIgnoredUser(author.id);
+      await sendSpamIgnoreLog(author);
+      await pending.confirmMessage
+        .edit({ content: 'You have been ignored for sending too many messages without responding.', components: [] })
+        .catch(() => null);
+    }
+
+    return;
+  }
+
+  const confirmMessage = await author.send(buildConfirmMessage(author.id)).catch(() => null);
+  if (!confirmMessage) return;
+
+  pendingConfirmations.set(author.id, {
+    confirmMessage,
+    originalContent: message.content,
+    originalFiles: attachmentFiles(message),
+    spamCount: 0,
+  });
 };
 
 const handleStaffThreadMessage = async (message) => {
@@ -496,6 +619,11 @@ client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isChatInputCommand()) {
       await handleStaffSlashCommand(interaction);
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId.startsWith(`${CONFIRM_PREFIX}:`)) {
+      await handleConfirmationButton(interaction);
       return;
     }
 

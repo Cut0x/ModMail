@@ -6,6 +6,7 @@ const defaultState = () => ({
   ticketsByUser: {},
   ticketsByThread: {},
   blockedUsers: {},
+  spamIgnoredUsers: {},
   closedTickets: [],
 });
 
@@ -30,6 +31,7 @@ function createDb(dbFilePath) {
     ticketsByUser: raw?.ticketsByUser && typeof raw.ticketsByUser === 'object' ? raw.ticketsByUser : {},
     ticketsByThread: raw?.ticketsByThread && typeof raw.ticketsByThread === 'object' ? raw.ticketsByThread : {},
     blockedUsers: raw?.blockedUsers && typeof raw.blockedUsers === 'object' ? raw.blockedUsers : {},
+    spamIgnoredUsers: raw?.spamIgnoredUsers && typeof raw.spamIgnoredUsers === 'object' ? raw.spamIgnoredUsers : {},
     closedTickets: Array.isArray(raw?.closedTickets) ? raw.closedTickets : [],
   });
 
@@ -112,6 +114,14 @@ function createDb(dbFilePath) {
 
   const isBlocked = (userId) => Boolean(state.blockedUsers[userId]);
 
+  const isSpamIgnored = (userId) => Boolean(state.spamIgnoredUsers[userId]);
+
+  const addSpamIgnoredUser = async (userId) => {
+    state.spamIgnoredUsers[userId] = { userId, ignoredAt: new Date().toISOString() };
+    await save();
+    return state.spamIgnoredUsers[userId];
+  };
+
   const blockUser = async ({ userId, blockedBy, reason = null }) => {
     state.blockedUsers[userId] = {
       userId,
@@ -142,6 +152,8 @@ function createDb(dbFilePath) {
     isBlocked,
     blockUser,
     unblockUser,
+    isSpamIgnored,
+    addSpamIgnoredUser,
     getState: () => state,
     dbPath: absolutePath,
   };
