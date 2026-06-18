@@ -1,4 +1,7 @@
 node_modules/
 .env
 data/modmail.json
+data/modmail.sqlite
+data/modmail.sqlite-shm
+data/modmail.sqlite-wal
 npm-debug.log*

@@ -1,8 +1,11 @@
 {
   "name": "modmail",
   "version": "1.0.0",
-  "description": "Discord ModMail bot with discord.js and JSON storage.",
+  "description": "Discord ModMail bot with discord.js and SQLite storage.",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js"

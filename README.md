@@ -1,13 +1,13 @@
 # ModMail (Node.js + discord.js + Components V2)
 
-ModMail bot built with `discord.js` and local JSON storage.
+ModMail bot built with `discord.js` and local SQLite storage.
 
 ## Stack
 
-- Node.js
+- Node.js 24+
 - discord.js `14.26.4`
 - Discord Components V2 (`MessageFlags.IsComponentsV2` + `ContainerBuilder`)
-- JSON database (`data/modmail.json`)
+- SQLite database (`data/modmail.sqlite`)
 
 ## Installation
 
@@ -31,7 +31,8 @@ Optional variables:
 - `STAFF_ROLE_ID` (recommended, used to mention staff when a ticket opens)
 - `BOT_ACTIVITY_PLAYING` (sets the bot status as **Playing ...**)
 - `THREAD_AUTO_ARCHIVE_MINUTES` (`60`, `1440`, `4320`, `10080`)
-- `MODMAIL_DB_FILE` (default: `./data/modmail.json`)
+- `MODMAIL_SQLITE_FILE` (default: `./data/modmail.sqlite`)
+- `MODMAIL_DB_FILE` (optional legacy JSON file imported automatically when the SQLite database is empty)
 
 Example:
 
