@@ -14,6 +14,7 @@ const normalizeLegacyState = (raw) => ({
 
 const boolToInt = (value) => (value ? 1 : 0);
 const intToBool = (value) => Boolean(value);
+const DEFAULT_DM_CLOSED_MESSAGE = 'Vos messages privés sont fermés.';
 
 function createDb(dbFilePath, options = {}) {
   const absolutePath = path.resolve(dbFilePath);
@@ -68,6 +69,7 @@ function createDb(dbFilePath, options = {}) {
         description TEXT NOT NULL,
         button_text TEXT NOT NULL,
         dm_message TEXT NOT NULL,
+        dm_closed_message TEXT NOT NULL DEFAULT 'Vos messages privés sont fermés.',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -100,6 +102,13 @@ function createDb(dbFilePath, options = {}) {
       CREATE INDEX IF NOT EXISTS idx_closed_tickets_user_id ON closed_tickets(user_id);
       CREATE INDEX IF NOT EXISTS idx_closed_tickets_thread_id ON closed_tickets(thread_id);
     `);
+
+    const panelColumns = db.prepare('PRAGMA table_info(ticket_panels)').all();
+    const hasClosedDmMessage = panelColumns.some((column) => column.name === 'dm_closed_message');
+
+    if (!hasClosedDmMessage) {
+      db.exec(`ALTER TABLE ticket_panels ADD COLUMN dm_closed_message TEXT NOT NULL DEFAULT '${DEFAULT_DM_CLOSED_MESSAGE}'`);
+    }
   };
 
   const prepareStatements = () => ({
@@ -180,6 +189,7 @@ function createDb(dbFilePath, options = {}) {
         description,
         button_text AS buttonText,
         dm_message AS dmMessage,
+        dm_closed_message AS dmClosedMessage,
         created_at AS createdAt,
         updated_at AS updatedAt
       FROM ticket_panels
@@ -194,10 +204,11 @@ function createDb(dbFilePath, options = {}) {
         description,
         button_text,
         dm_message,
+        dm_closed_message,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(panel_id) DO UPDATE SET
         channel_id = excluded.channel_id,
         message_id = excluded.message_id,
@@ -205,6 +216,7 @@ function createDb(dbFilePath, options = {}) {
         description = excluded.description,
         button_text = excluded.button_text,
         dm_message = excluded.dm_message,
+        dm_closed_message = excluded.dm_closed_message,
         updated_at = excluded.updated_at
     `),
     isBlocked: db.prepare('SELECT 1 AS found FROM blocked_users WHERE user_id = ?'),
@@ -253,6 +265,7 @@ function createDb(dbFilePath, options = {}) {
         description,
         button_text AS buttonText,
         dm_message AS dmMessage,
+        dm_closed_message AS dmClosedMessage,
         created_at AS createdAt,
         updated_at AS updatedAt
       FROM ticket_panels
@@ -320,6 +333,7 @@ function createDb(dbFilePath, options = {}) {
           panel.description,
           panel.buttonText,
           panel.dmMessage,
+          panel.dmClosedMessage ?? DEFAULT_DM_CLOSED_MESSAGE,
           panel.createdAt ?? now,
           panel.updatedAt ?? now,
         );
@@ -368,7 +382,16 @@ function createDb(dbFilePath, options = {}) {
 
   const getTicketPanel = (panelId) => statements.getTicketPanel.get(panelId) ?? null;
 
-  const upsertTicketPanel = async ({ panelId, channelId, messageId = null, title, description, buttonText, dmMessage }) => {
+  const upsertTicketPanel = async ({
+    panelId,
+    channelId,
+    messageId = null,
+    title,
+    description,
+    buttonText,
+    dmMessage,
+    dmClosedMessage = DEFAULT_DM_CLOSED_MESSAGE,
+  }) => {
     const existing = getTicketPanel(panelId);
     const now = new Date().toISOString();
 
@@ -380,6 +403,7 @@ function createDb(dbFilePath, options = {}) {
       description,
       buttonText,
       dmMessage,
+      dmClosedMessage,
       existing?.createdAt ?? now,
       now,
     );
