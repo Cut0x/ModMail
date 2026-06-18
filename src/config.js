@@ -1,7 +1,7 @@
 const path = require('node:path');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const REQUIRED_KEYS = ['DISCORD_TOKEN', 'MODMAIL_GUILD_ID', 'MODMAIL_THREADS_CHANNEL_ID'];
 
@@ -21,7 +21,8 @@ const config = {
   staffRoleId: process.env.STAFF_ROLE_ID || null,
   botActivityPlaying: process.env.BOT_ACTIVITY_PLAYING?.trim() || null,
   threadAutoArchiveMinutes: allowedAutoArchive.has(parsedAutoArchive) ? parsedAutoArchive : 1440,
-  dbFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
+  dbFilePath: process.env.MODMAIL_SQLITE_FILE || path.join(__dirname, '..', 'data', 'modmail.sqlite'),
+  legacyJsonFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
   logsIgnoredMpUserChannelId: process.env.LOGS_IGNORED_MP_USER_CHANNEL || null,
 };
 

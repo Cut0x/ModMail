@@ -6,6 +6,7 @@ const {
   ChannelType,
   Client,
   ContainerBuilder,
+  Events,
   GatewayIntentBits,
   MessageFlags,
   ModalBuilder,
@@ -23,7 +24,9 @@ const { randomUUID } = require('node:crypto');
 const { config } = require('./config');
 const { createDb } = require('./db');
 
-const db = createDb(config.dbFilePath);
+const db = createDb(config.dbFilePath, {
+  legacyJsonFilePath: config.legacyJsonFilePath,
+});
 
 const client = new Client({
   intents: [
@@ -253,8 +256,7 @@ const handleConfirmationButton = async (interaction) => {
 
     const ticket = db.getTicketByUserId(user.id);
     if (ticket && !ticket.welcomed) {
-      ticket.welcomed = true;
-      await db.upsertTicket({ userId: user.id, threadId: ticket.threadId, guildId: ticket.guildId });
+      await db.markTicketWelcomed(user.id);
     }
 
     await thread.send({
@@ -540,8 +542,7 @@ const handleDmMessage = async (message) => {
 
       const ticket = db.getTicketByUserId(author.id);
       if (ticket) {
-        ticket.welcomed = true;
-        await db.upsertTicket({ userId: author.id, threadId: ticket.threadId, guildId: ticket.guildId });
+        await db.markTicketWelcomed(author.id);
       }
     }
 
@@ -833,12 +834,7 @@ const handleTicketReasonModalSubmit = async (interaction) => {
 
   const ticket = db.getTicketByUserId(interaction.user.id);
   if (ticket) {
-    ticket.welcomed = true;
-    await db.upsertTicket({
-      userId: interaction.user.id,
-      threadId: ticket.threadId,
-      guildId: ticket.guildId,
-    });
+    await db.markTicketWelcomed(interaction.user.id);
   }
 
   await thread.send({
@@ -861,7 +857,7 @@ const handleTicketReasonModalSubmit = async (interaction) => {
   });
 };
 
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
   await db.load();
 
   const guild = await client.guilds.fetch(config.guildId).catch(() => null);
@@ -879,7 +875,7 @@ client.once('ready', async () => {
 
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`ModMail guild: ${guild.name} (${guild.id})`);
-  console.log(`JSON DB: ${db.dbPath}`);
+  console.log(`SQLite DB: ${db.dbPath}`);
   console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /help');
   if (config.botActivityPlaying) {
     console.log(`Bot activity: Playing ${config.botActivityPlaying}`);
