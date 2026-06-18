@@ -46,6 +46,9 @@ npm start
 ## Behavior
 
 - A user sends a DM to the bot -> the bot posts an announcement in `MODMAIL_THREADS_CHANNEL_ID` (with staff role mention if configured), then creates a thread
+- An administrator can run `/config-ticket` and choose the target channel in the modal to send a public ticket panel with a green button
+- The ticket panel button opens a modal asking the user why they are opening a ticket, then creates or reuses the user's ModMail thread
+- The DM sent after a panel ticket is opened is configurable from `/config-ticket`
 - User messages are relayed into the thread
 - Staff messages in the thread are relayed to the user via DM
 - A Components V2 control panel is posted in each thread with buttons:
@@ -59,6 +62,10 @@ npm start
 - `/block [reason]`
 - `/unblock`
 - `/help`
+
+## Admin Slash Commands
+
+- `/config-ticket` (requires `Administrator`)
 
 ## Recommended Bot Permissions
 

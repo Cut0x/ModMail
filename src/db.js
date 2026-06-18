@@ -5,6 +5,7 @@ const path = require('node:path');
 const defaultState = () => ({
   ticketsByUser: {},
   ticketsByThread: {},
+  ticketPanels: {},
   blockedUsers: {},
   spamIgnoredUsers: {},
   closedTickets: [],
@@ -30,6 +31,7 @@ function createDb(dbFilePath) {
   const normalizeState = (raw) => ({
     ticketsByUser: raw?.ticketsByUser && typeof raw.ticketsByUser === 'object' ? raw.ticketsByUser : {},
     ticketsByThread: raw?.ticketsByThread && typeof raw.ticketsByThread === 'object' ? raw.ticketsByThread : {},
+    ticketPanels: raw?.ticketPanels && typeof raw.ticketPanels === 'object' ? raw.ticketPanels : {},
     blockedUsers: raw?.blockedUsers && typeof raw.blockedUsers === 'object' ? raw.blockedUsers : {},
     spamIgnoredUsers: raw?.spamIgnoredUsers && typeof raw.spamIgnoredUsers === 'object' ? raw.spamIgnoredUsers : {},
     closedTickets: Array.isArray(raw?.closedTickets) ? raw.closedTickets : [],
@@ -50,6 +52,29 @@ function createDb(dbFilePath) {
   const getTicketByUserId = (userId) => state.ticketsByUser[userId] ?? null;
 
   const getUserIdByThreadId = (threadId) => state.ticketsByThread[threadId] ?? null;
+
+  const getTicketPanel = (panelId) => state.ticketPanels[panelId] ?? null;
+
+  const upsertTicketPanel = async ({ panelId, channelId, messageId = null, title, description, buttonText, dmMessage }) => {
+    const now = new Date().toISOString();
+    const existing = state.ticketPanels[panelId];
+
+    state.ticketPanels[panelId] = {
+      ...(existing ?? {}),
+      panelId,
+      channelId,
+      messageId,
+      title,
+      description,
+      buttonText,
+      dmMessage,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    await save();
+    return state.ticketPanels[panelId];
+  };
 
   const upsertTicket = async ({ userId, threadId, guildId }) => {
     const now = new Date().toISOString();
@@ -146,6 +171,8 @@ function createDb(dbFilePath) {
     load,
     getTicketByUserId,
     getUserIdByThreadId,
+    getTicketPanel,
+    upsertTicketPanel,
     upsertTicket,
     touchTicketForUser,
     closeTicketByThreadId,

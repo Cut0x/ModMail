@@ -18,6 +18,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
+const { randomUUID } = require('node:crypto');
 
 const { config } = require('./config');
 const { createDb } = require('./db');
@@ -42,6 +43,18 @@ const AUTO_ARCHIVE_VALUES = new Set([60, 1440, 4320, 10080]);
 const CLOSE_MODAL_PREFIX = 'modmail:closemodal';
 const CLOSE_REASON_INPUT_ID = 'close_reason';
 const STAFF_COMMAND_NAMES = new Set(['close', 'block', 'unblock', 'help']);
+const CONFIG_TICKET_COMMAND_NAME = 'config-ticket';
+const TICKET_CONFIG_MODAL_PREFIX = 'modmail:ticketconfig';
+const TICKET_OPEN_BUTTON_PREFIX = 'modmail:ticketopen';
+const TICKET_REASON_MODAL_PREFIX = 'modmail:ticketreason';
+const TICKET_CONFIG_INPUT_IDS = {
+  channel: 'ticket_channel',
+  title: 'ticket_title',
+  description: 'ticket_description',
+  buttonText: 'ticket_button_text',
+  dmMessage: 'ticket_dm_message',
+};
+const TICKET_REASON_INPUT_ID = 'ticket_reason';
 const CONFIRM_PREFIX = 'modmail:confirm';
 const SPAM_THRESHOLD = 3;
 
@@ -49,6 +62,17 @@ const SPAM_THRESHOLD = 3;
 const pendingConfirmations = new Map();
 
 const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
+
+const parseChannelId = (value) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  const mentionMatch = trimmed.match(/^<#(\d{17,20})>$/);
+  if (mentionMatch) return mentionMatch[1];
+
+  const idMatch = trimmed.match(/^\d{17,20}$/);
+  return idMatch ? idMatch[0] : null;
+};
 
 const attachmentFiles = (message) => {
   if (!message.attachments?.size) return [];
@@ -79,6 +103,22 @@ const isStaffMember = (member) => {
   if (typeof member.permissions === 'string') {
     return new PermissionsBitField(BigInt(member.permissions)).has(
       PermissionsBitField.Flags.ManageMessages,
+    );
+  }
+
+  return false;
+};
+
+const isAdministrator = (member) => {
+  if (!member) return false;
+
+  if (member.permissions?.has) {
+    return member.permissions.has(PermissionsBitField.Flags.Administrator);
+  }
+
+  if (typeof member.permissions === 'string') {
+    return new PermissionsBitField(BigInt(member.permissions)).has(
+      PermissionsBitField.Flags.Administrator,
     );
   }
 
@@ -270,7 +310,92 @@ const buildCloseReasonModal = ({ userId, threadId }) => {
   return modal;
 };
 
+const buildTicketConfigModal = (panelId) => {
+  const channelInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.channel)
+    .setLabel('Target channel ID or mention')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(100)
+    .setPlaceholder('#support or 123456789012345678');
+
+  const titleInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.title)
+    .setLabel('Panel title')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(100)
+    .setPlaceholder('Open a support ticket');
+
+  const descriptionInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.description)
+    .setLabel('Panel description')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1800)
+    .setPlaceholder('Click the button below to contact support.');
+
+  const buttonTextInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.buttonText)
+    .setLabel('Button text')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(80)
+    .setPlaceholder('Open ticket');
+
+  const dmMessageInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.dmMessage)
+    .setLabel('DM message after ticket opens')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1800)
+    .setPlaceholder('Your ticket is open. To talk with support, send your messages here.');
+
+  return new ModalBuilder()
+    .setCustomId(`${TICKET_CONFIG_MODAL_PREFIX}:${panelId}`)
+    .setTitle('Configure ticket panel')
+    .addComponents(
+      new ActionRowBuilder().addComponents(channelInput),
+      new ActionRowBuilder().addComponents(titleInput),
+      new ActionRowBuilder().addComponents(descriptionInput),
+      new ActionRowBuilder().addComponents(buttonTextInput),
+      new ActionRowBuilder().addComponents(dmMessageInput),
+    );
+};
+
+const buildTicketPanelMessage = ({ panelId, title, description, buttonText }) => {
+  const openButton = new ButtonBuilder()
+    .setCustomId(`${TICKET_OPEN_BUTTON_PREFIX}:${panelId}`)
+    .setLabel(buttonText)
+    .setStyle(ButtonStyle.Success);
+
+  return {
+    content: `## ${title}\n${description}`,
+    components: [new ActionRowBuilder().addComponents(openButton)],
+    allowedMentions: { parse: [] },
+  };
+};
+
+const buildTicketReasonModal = (panelId) => {
+  const reasonInput = new TextInputBuilder()
+    .setCustomId(TICKET_REASON_INPUT_ID)
+    .setLabel('Ticket reason')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1000)
+    .setPlaceholder('Explain why you are opening this ticket.');
+
+  return new ModalBuilder()
+    .setCustomId(`${TICKET_REASON_MODAL_PREFIX}:${panelId}`)
+    .setTitle('Open a support ticket')
+    .addComponents(new ActionRowBuilder().addComponents(reasonInput));
+};
+
 const buildSlashCommands = () => [
+  new SlashCommandBuilder()
+    .setName(CONFIG_TICKET_COMMAND_NAME)
+    .setDescription('Configure and send a ticket opening panel')
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
   new SlashCommandBuilder()
     .setName('close')
     .setDescription('Close the current ModMail ticket')
@@ -567,6 +692,175 @@ const handleStaffSlashCommand = async (interaction) => {
   }
 };
 
+const handleTicketConfigCommand = async (interaction) => {
+  if (!interaction.inGuild()) return;
+
+  if (!isAdministrator(interaction.member)) {
+    await interaction.reply({
+      content: 'You need the Administrator permission to use this command.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.showModal(buildTicketConfigModal(randomUUID()));
+};
+
+const handleTicketConfigModalSubmit = async (interaction) => {
+  if (!interaction.inGuild()) return;
+
+  if (!isAdministrator(interaction.member)) {
+    await interaction.reply({
+      content: 'You need the Administrator permission to use this action.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply({
+    flags: MessageFlags.Ephemeral,
+  });
+
+  const [, , panelId] = interaction.customId.split(':');
+  const channelId = parseChannelId(interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.channel));
+  const title = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.title).trim();
+  const description = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.description).trim();
+  const buttonText = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.buttonText).trim();
+  const dmMessage = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.dmMessage).trim();
+
+  if (!channelId) {
+    await interaction.editReply({
+      content: 'Invalid channel. Use a channel mention like #support or a channel ID.',
+    });
+    return;
+  }
+
+  const targetChannel = await client.channels.fetch(channelId).catch(() => null);
+
+  if (
+    !targetChannel ||
+    targetChannel.guildId !== interaction.guildId ||
+    !targetChannel.isTextBased?.() ||
+    typeof targetChannel.send !== 'function'
+  ) {
+    await interaction.editReply({
+      content: 'I could not find a text channel from this server with that value.',
+    });
+    return;
+  }
+
+  let panelMessage;
+  try {
+    panelMessage = await targetChannel.send(
+      buildTicketPanelMessage({
+        panelId,
+        title,
+        description,
+        buttonText,
+      }),
+    );
+  } catch {
+    await interaction.editReply({
+      content: `I could not send the ticket panel in <#${targetChannel.id}>. Check my permissions in that channel.`,
+    });
+    return;
+  }
+
+  await db.upsertTicketPanel({
+    panelId,
+    channelId: targetChannel.id,
+    messageId: panelMessage.id,
+    title,
+    description,
+    buttonText,
+    dmMessage,
+  });
+
+  await interaction.editReply({
+    content: `Ticket panel sent in <#${targetChannel.id}>.`,
+  });
+};
+
+const handleTicketOpenButton = async (interaction) => {
+  const [, , panelId] = interaction.customId.split(':');
+  const panel = db.getTicketPanel(panelId);
+
+  if (!panel) {
+    await interaction.reply({
+      content: 'This ticket panel is no longer configured.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (db.isBlocked(interaction.user.id) || db.isSpamIgnored(interaction.user.id)) {
+    await interaction.reply({
+      content: 'You cannot create a ticket at this time.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.showModal(buildTicketReasonModal(panelId));
+};
+const handleTicketReasonModalSubmit = async (interaction) => {
+  if (!interaction.inGuild()) return;
+
+  await interaction.deferReply({
+    flags: MessageFlags.Ephemeral,
+  });
+
+  const [, , panelId] = interaction.customId.split(':');
+  const panel = db.getTicketPanel(panelId);
+
+  if (!panel) {
+    await interaction.editReply({
+      content: 'This ticket panel is no longer configured.',
+    });
+    return;
+  }
+
+  if (db.isBlocked(interaction.user.id) || db.isSpamIgnored(interaction.user.id)) {
+    await interaction.editReply({
+      content: 'You cannot create a ticket at this time.',
+    });
+    return;
+  }
+
+  const reason = interaction.fields.getTextInputValue(TICKET_REASON_INPUT_ID).trim();
+  const thread = await ensureThreadForUser(interaction.user);
+  await db.touchTicketForUser(interaction.user.id);
+
+  const ticket = db.getTicketByUserId(interaction.user.id);
+  if (ticket) {
+    ticket.welcomed = true;
+    await db.upsertTicket({
+      userId: interaction.user.id,
+      threadId: ticket.threadId,
+      guildId: ticket.guildId,
+    });
+  }
+
+  await thread.send({
+    content: `**Ticket opened from panel**\nUser: <@${interaction.user.id}> (\`${interaction.user.id}\`)\nReason: ${safeText(reason)}`,
+    allowedMentions: { parse: [] },
+  });
+
+  const dmSent = await interaction.user
+    .send({
+      content: panel.dmMessage,
+      allowedMentions: { parse: [] },
+    })
+    .then(() => true)
+    .catch(() => false);
+
+  await interaction.editReply({
+    content: dmSent
+      ? 'Your ticket has been opened. Check your DMs to talk with support.'
+      : 'Your ticket has been opened, but I could not send you a DM. Please enable DMs from this server.',
+  });
+};
+
 client.once('ready', async () => {
   await db.load();
 
@@ -586,7 +880,7 @@ client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`ModMail guild: ${guild.name} (${guild.id})`);
   console.log(`JSON DB: ${db.dbPath}`);
-  console.log('Slash commands registered: /close, /block, /unblock, /help');
+  console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /help');
   if (config.botActivityPlaying) {
     console.log(`Bot activity: Playing ${config.botActivityPlaying}`);
   }
@@ -618,12 +912,22 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isChatInputCommand()) {
+      if (interaction.commandName === CONFIG_TICKET_COMMAND_NAME) {
+        await handleTicketConfigCommand(interaction);
+        return;
+      }
+
       await handleStaffSlashCommand(interaction);
       return;
     }
 
     if (interaction.isButton() && interaction.customId.startsWith(`${CONFIRM_PREFIX}:`)) {
       await handleConfirmationButton(interaction);
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId.startsWith(`${TICKET_OPEN_BUTTON_PREFIX}:`)) {
+      await handleTicketOpenButton(interaction);
       return;
     }
 
@@ -685,6 +989,16 @@ client.on('interactionCreate', async (interaction) => {
         });
         return;
       }
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId.startsWith(`${TICKET_CONFIG_MODAL_PREFIX}:`)) {
+      await handleTicketConfigModalSubmit(interaction);
+      return;
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId.startsWith(`${TICKET_REASON_MODAL_PREFIX}:`)) {
+      await handleTicketReasonModalSubmit(interaction);
+      return;
     }
 
     if (interaction.isModalSubmit() && interaction.customId.startsWith(`${CLOSE_MODAL_PREFIX}:`)) {
