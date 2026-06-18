@@ -51,11 +51,11 @@ const TICKET_CONFIG_MODAL_PREFIX = 'modmail:ticketconfig';
 const TICKET_OPEN_BUTTON_PREFIX = 'modmail:ticketopen';
 const TICKET_REASON_MODAL_PREFIX = 'modmail:ticketreason';
 const TICKET_CONFIG_INPUT_IDS = {
-  channel: 'ticket_channel',
   title: 'ticket_title',
   description: 'ticket_description',
   buttonText: 'ticket_button_text',
   dmMessage: 'ticket_dm_message',
+  dmClosedMessage: 'ticket_dm_closed_message',
 };
 const TICKET_REASON_INPUT_ID = 'ticket_reason';
 const CONFIRM_PREFIX = 'modmail:confirm';
@@ -65,17 +65,6 @@ const SPAM_THRESHOLD = 3;
 const pendingConfirmations = new Map();
 
 const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
-
-const parseChannelId = (value) => {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-
-  const mentionMatch = trimmed.match(/^<#(\d{17,20})>$/);
-  if (mentionMatch) return mentionMatch[1];
-
-  const idMatch = trimmed.match(/^\d{17,20}$/);
-  return idMatch ? idMatch[0] : null;
-};
 
 const attachmentFiles = (message) => {
   if (!message.attachments?.size) return [];
@@ -312,15 +301,7 @@ const buildCloseReasonModal = ({ userId, threadId }) => {
   return modal;
 };
 
-const buildTicketConfigModal = (panelId) => {
-  const channelInput = new TextInputBuilder()
-    .setCustomId(TICKET_CONFIG_INPUT_IDS.channel)
-    .setLabel('Target channel ID or mention')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(100)
-    .setPlaceholder('#support or 123456789012345678');
-
+const buildTicketConfigModal = ({ panelId, channelId }) => {
   const titleInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.title)
     .setLabel('Panel title')
@@ -353,15 +334,23 @@ const buildTicketConfigModal = (panelId) => {
     .setMaxLength(1800)
     .setPlaceholder('Your ticket is open. To talk with support, send your messages here.');
 
+  const dmClosedMessageInput = new TextInputBuilder()
+    .setCustomId(TICKET_CONFIG_INPUT_IDS.dmClosedMessage)
+    .setLabel('Message when DMs are closed')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1800)
+    .setPlaceholder('Vos messages privés sont fermés.');
+
   return new ModalBuilder()
-    .setCustomId(`${TICKET_CONFIG_MODAL_PREFIX}:${panelId}`)
+    .setCustomId(`${TICKET_CONFIG_MODAL_PREFIX}:${panelId}:${channelId}`)
     .setTitle('Configure ticket panel')
     .addComponents(
-      new ActionRowBuilder().addComponents(channelInput),
       new ActionRowBuilder().addComponents(titleInput),
       new ActionRowBuilder().addComponents(descriptionInput),
       new ActionRowBuilder().addComponents(buttonTextInput),
       new ActionRowBuilder().addComponents(dmMessageInput),
+      new ActionRowBuilder().addComponents(dmClosedMessageInput),
     );
 };
 
@@ -397,7 +386,14 @@ const buildSlashCommands = () => [
   new SlashCommandBuilder()
     .setName(CONFIG_TICKET_COMMAND_NAME)
     .setDescription('Configure and send a ticket opening panel')
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+    .addChannelOption((option) =>
+      option
+        .setName('channel')
+        .setDescription('Channel where the ticket panel will be sent')
+        .setRequired(true)
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+    ),
   new SlashCommandBuilder()
     .setName('close')
     .setDescription('Close the current ModMail ticket')
@@ -704,7 +700,24 @@ const handleTicketConfigCommand = async (interaction) => {
     return;
   }
 
-  await interaction.showModal(buildTicketConfigModal(randomUUID()));
+  const targetChannel = interaction.options.getChannel('channel', true);
+
+  if (
+    targetChannel.guildId !== interaction.guildId ||
+    !targetChannel.isTextBased?.() ||
+    typeof targetChannel.send !== 'function'
+  ) {
+    await interaction.reply({
+      content: 'I could not use that channel as a ticket panel channel.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.showModal(buildTicketConfigModal({
+    panelId: randomUUID(),
+    channelId: targetChannel.id,
+  }));
 };
 
 const handleTicketConfigModalSubmit = async (interaction) => {
@@ -722,19 +735,12 @@ const handleTicketConfigModalSubmit = async (interaction) => {
     flags: MessageFlags.Ephemeral,
   });
 
-  const [, , panelId] = interaction.customId.split(':');
-  const channelId = parseChannelId(interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.channel));
+  const [, , panelId, channelId] = interaction.customId.split(':');
   const title = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.title).trim();
   const description = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.description).trim();
   const buttonText = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.buttonText).trim();
   const dmMessage = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.dmMessage).trim();
-
-  if (!channelId) {
-    await interaction.editReply({
-      content: 'Invalid channel. Use a channel mention like #support or a channel ID.',
-    });
-    return;
-  }
+  const dmClosedMessage = interaction.fields.getTextInputValue(TICKET_CONFIG_INPUT_IDS.dmClosedMessage).trim();
 
   const targetChannel = await client.channels.fetch(channelId).catch(() => null);
 
@@ -775,6 +781,7 @@ const handleTicketConfigModalSubmit = async (interaction) => {
     description,
     buttonText,
     dmMessage,
+    dmClosedMessage,
   });
 
   await interaction.editReply({
@@ -804,6 +811,7 @@ const handleTicketOpenButton = async (interaction) => {
 
   await interaction.showModal(buildTicketReasonModal(panelId));
 };
+
 const handleTicketReasonModalSubmit = async (interaction) => {
   if (!interaction.inGuild()) return;
 
@@ -853,7 +861,7 @@ const handleTicketReasonModalSubmit = async (interaction) => {
   await interaction.editReply({
     content: dmSent
       ? 'Your ticket has been opened. Check your DMs to talk with support.'
-      : 'Your ticket has been opened, but I could not send you a DM. Please enable DMs from this server.',
+      : panel.dmClosedMessage,
   });
 };
 
