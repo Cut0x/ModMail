@@ -22,6 +22,7 @@ const config = {
   botActivityPlaying: process.env.BOT_ACTIVITY_PLAYING?.trim() || null,
   threadAutoArchiveMinutes: allowedAutoArchive.has(parsedAutoArchive) ? parsedAutoArchive : 1440,
   dbFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
+  logsIgnoredMpUserChannelId: process.env.LOGS_IGNORED_MP_USER_CHANNEL || null,
 };
 
 module.exports = { config };
