@@ -32,7 +32,9 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageTyping,
     GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageTyping,
     GatewayIntentBits.MessageContent,
   ],
   partials: [Partials.Channel, Partials.Message, Partials.User],
@@ -587,9 +589,12 @@ const handleStaffThreadMessage = async (message) => {
     return;
   }
 
+  const staffName = message.member?.displayName ?? message.author.username;
   const files = attachmentFiles(message);
   const hasText = message.content && message.content.trim().length > 0;
-  const content = hasText ? `**Staff:** ${message.content.trim()}` : '**Staff sent an attachment.**';
+  const content = hasText
+    ? `**${staffName}:** ${message.content.trim()}`
+    : `**${staffName} sent an attachment.**`;
 
   await targetUser.send({
     content,
@@ -910,6 +915,38 @@ client.on('messageCreate', async (message) => {
         .send('An internal error occurred while handling your message. Please try again later.')
         .catch(() => null);
     }
+  }
+});
+
+client.on(Events.TypingStart, async (typing) => {
+  try {
+    if (typing.user.bot) return;
+
+    if (!typing.inGuild()) {
+      const ticket = db.getTicketByUserId(typing.user.id);
+      if (!ticket) return;
+
+      const thread = await client.channels.fetch(ticket.threadId).catch(() => null);
+      if (!thread || !isModmailThread(thread)) return;
+
+      await thread.sendTyping().catch(() => null);
+      return;
+    }
+
+    if (!isModmailThread(typing.channel) || !isStaffMember(typing.member)) return;
+
+    const userId = db.getUserIdByThreadId(typing.channel.id);
+    if (!userId) return;
+
+    const targetUser = await client.users.fetch(userId).catch(() => null);
+    if (!targetUser) return;
+
+    const dmChannel = await targetUser.createDM().catch(() => null);
+    if (!dmChannel) return;
+
+    await dmChannel.sendTyping().catch(() => null);
+  } catch (error) {
+    console.error('typingStart handler error:', error);
   }
 });
 
