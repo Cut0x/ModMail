@@ -68,6 +68,12 @@ const pendingConfirmations = new Map();
 
 const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
 
+const reactToMessage = async (message, success) => {
+  const emoji = success ? config.reactionSuccessEmoji : config.reactionFailureEmoji;
+  if (!emoji) return;
+  await message.react(emoji).catch(() => null);
+};
+
 const attachmentFiles = (message) => {
   if (!message.attachments?.size) return [];
 
@@ -527,13 +533,21 @@ const handleDmMessage = async (message) => {
     const thread = await ensureThreadForUser(author);
     await db.touchTicketForUser(author.id);
 
-    await thread.send({
-      content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}`,
-      files: attachmentFiles(message),
-      allowedMentions: { parse: [] },
-    });
+    const relayed = await thread
+      .send({
+        content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}`,
+        files: attachmentFiles(message),
+        allowedMentions: { parse: [] },
+      })
+      .then(() => true)
+      .catch((error) => {
+        console.error('Failed to relay DM message to thread:', error);
+        return false;
+      });
 
-    if (!db.getTicketByUserId(author.id)?.welcomed) {
+    await reactToMessage(message, relayed);
+
+    if (relayed && !db.getTicketByUserId(author.id)?.welcomed) {
       await author
         .send('Your message has been sent to the staff team. We will reply here soon.')
         .catch(() => null);
@@ -586,6 +600,7 @@ const handleStaffThreadMessage = async (message) => {
   const targetUser = await client.users.fetch(userId).catch(() => null);
   if (!targetUser) {
     await message.reply('Cannot DM the target user (not found).');
+    await reactToMessage(message, false);
     return;
   }
 
@@ -596,13 +611,19 @@ const handleStaffThreadMessage = async (message) => {
     ? `**${staffName}:** ${message.content.trim()}`
     : `**${staffName} sent an attachment.**`;
 
-  await targetUser.send({
-    content,
-    files,
-    allowedMentions: { parse: [] },
-  });
+  const sent = await targetUser
+    .send({ content, files, allowedMentions: { parse: [] } })
+    .then(() => true)
+    .catch((error) => {
+      console.error('Failed to relay staff message to user DM:', error);
+      return false;
+    });
 
-  await db.touchTicketForUser(userId);
+  await reactToMessage(message, sent);
+
+  if (sent) {
+    await db.touchTicketForUser(userId);
+  }
 };
 
 const handleStaffSlashCommand = async (interaction) => {
