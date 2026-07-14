@@ -51,7 +51,8 @@ npm start
 - The ticket panel button opens a modal asking the user why they are opening a ticket, then creates or reuses the user's ModMail thread
 - The DM sent after a panel ticket is opened, and the response shown when the user's DMs are closed, are configurable from `/config-ticket`
 - User messages are relayed into the thread
-- Staff messages in the thread are relayed to the user via DM
+- Staff messages in the thread are relayed to the user via DM, signed with the display name of the staff member who wrote it (never a generic "Staff" label)
+- Typing indicators are relayed in both directions using Discord's native typing indicator: the user typing in DM triggers the bot's typing indicator in the thread, and staff typing in the thread triggers the bot's typing indicator in the user's DM
 - A Components V2 control panel is posted in each thread with buttons:
 - `Close ticket` (opens a modal to enter a reason)
 - `Block user`
