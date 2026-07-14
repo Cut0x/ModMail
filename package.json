@@ -4,7 +4,7 @@
   "description": "Discord ModMail bot with discord.js and SQLite storage.",
   "main": "src/index.js",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=18.19.1"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/Cut0x/ModMail#readme",
   "dependencies": {
+    "better-sqlite3": "^11.8.1",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2"
   }

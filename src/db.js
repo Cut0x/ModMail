@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+const Database = require('better-sqlite3');
 
 const normalizeLegacyState = (raw) => ({
   ticketsByUser: raw?.ticketsByUser && typeof raw.ticketsByUser === 'object' ? raw.ticketsByUser : {},
@@ -369,7 +369,7 @@ function createDb(dbFilePath, options = {}) {
 
   const load = async () => {
     ensureDirectory();
-    db = new DatabaseSync(absolutePath);
+    db = new Database(absolutePath);
     createSchema();
     statements = prepareStatements();
     await importLegacyJsonIfNeeded();
