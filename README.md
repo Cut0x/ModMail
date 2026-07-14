@@ -33,6 +33,7 @@ Optional variables:
 - `THREAD_AUTO_ARCHIVE_MINUTES` (`60`, `1440`, `4320`, `10080`)
 - `MODMAIL_SQLITE_FILE` (default: `./data/modmail.sqlite`)
 - `MODMAIL_DB_FILE` (optional legacy JSON file imported automatically when the SQLite database is empty)
+- `REACTION_SUCCESS_EMOJI` / `REACTION_FAILURE_EMOJI` (reaction added to a message once relayed; unicode emoji or custom emoji pasted as `<:name:id>`; default `✅` / `❌`)
 
 Example:
 
@@ -53,6 +54,7 @@ npm start
 - User messages are relayed into the thread
 - Staff messages in the thread are relayed to the user via DM, signed with the display name of the staff member who wrote it (never a generic "Staff" label)
 - Typing indicators are relayed in both directions using Discord's native typing indicator: the user typing in DM triggers the bot's typing indicator in the thread, and staff typing in the thread triggers the bot's typing indicator in the user's DM
+- Every relayed message gets a reaction on the original message: `REACTION_SUCCESS_EMOJI` if it was delivered, `REACTION_FAILURE_EMOJI` if it failed (e.g. the user has DMs closed)
 - A Components V2 control panel is posted in each thread with buttons:
 - `Close ticket` (opens a modal to enter a reason)
 - `Block user`

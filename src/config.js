@@ -14,6 +14,15 @@ for (const key of REQUIRED_KEYS) {
 const allowedAutoArchive = new Set([60, 1440, 4320, 10080]);
 const parsedAutoArchive = Number.parseInt(process.env.THREAD_AUTO_ARCHIVE_MINUTES ?? '1440', 10);
 
+// Accepts a unicode emoji, or a custom emoji copy-pasted as `<:name:id>` / `<a:name:id>`.
+const normalizeEmoji = (value, fallback) => {
+  const raw = value?.trim();
+  if (!raw) return fallback;
+
+  const customEmojiMatch = raw.match(/^<a?:\w+:(\d+)>$/);
+  return customEmojiMatch ? customEmojiMatch[1] : raw;
+};
+
 const config = {
   token: process.env.DISCORD_TOKEN,
   guildId: process.env.MODMAIL_GUILD_ID,
@@ -24,6 +33,8 @@ const config = {
   dbFilePath: process.env.MODMAIL_SQLITE_FILE || path.join(__dirname, '..', 'data', 'modmail.sqlite'),
   legacyJsonFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
   logsIgnoredMpUserChannelId: process.env.LOGS_IGNORED_MP_USER_CHANNEL || null,
+  reactionSuccessEmoji: normalizeEmoji(process.env.REACTION_SUCCESS_EMOJI, '✅'),
+  reactionFailureEmoji: normalizeEmoji(process.env.REACTION_FAILURE_EMOJI, '❌'),
 };
 
 module.exports = { config };
