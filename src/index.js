@@ -256,11 +256,21 @@ const handleConfirmationButton = async (interaction) => {
       await db.markTicketWelcomed(user.id);
     }
 
-    await thread.send({
+    const relayedMessage = await thread.send({
       content: `**From ${user.tag}** (${user.id})\n${safeText(pending.originalContent)}`,
       files: pending.originalFiles,
       allowedMentions: { parse: [] },
     });
+
+    if (pending.originalMessageId && pending.originalChannelId) {
+      await db.addRelayedMessage({
+        sourceMessageId: pending.originalMessageId,
+        sourceChannelId: pending.originalChannelId,
+        relayedMessageId: relayedMessage.id,
+        relayedChannelId: thread.id,
+        direction: 'dm_to_thread',
+      });
+    }
 
     await interaction
       .editReply({ content: 'Your message has been sent to the staff team. We will reply here soon.', components: [] })
@@ -533,17 +543,28 @@ const handleDmMessage = async (message) => {
     const thread = await ensureThreadForUser(author);
     await db.touchTicketForUser(author.id);
 
-    const relayed = await thread
+    const relayedMessage = await thread
       .send({
         content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}`,
         files: attachmentFiles(message),
         allowedMentions: { parse: [] },
       })
-      .then(() => true)
       .catch((error) => {
         console.error('Failed to relay DM message to thread:', error);
-        return false;
+        return null;
       });
+
+    const relayed = Boolean(relayedMessage);
+
+    if (relayedMessage) {
+      await db.addRelayedMessage({
+        sourceMessageId: message.id,
+        sourceChannelId: message.channel.id,
+        relayedMessageId: relayedMessage.id,
+        relayedChannelId: thread.id,
+        direction: 'dm_to_thread',
+      });
+    }
 
     await reactToMessage(message, relayed);
 
@@ -584,6 +605,8 @@ const handleDmMessage = async (message) => {
 
   pendingConfirmations.set(author.id, {
     confirmMessage,
+    originalMessageId: message.id,
+    originalChannelId: message.channel.id,
     originalContent: message.content,
     originalFiles: attachmentFiles(message),
     spamCount: 0,
@@ -611,19 +634,79 @@ const handleStaffThreadMessage = async (message) => {
     ? `**${staffName}:** ${message.content.trim()}`
     : `**${staffName} sent an attachment.**`;
 
-  const sent = await targetUser
+  const sentMessage = await targetUser
     .send({ content, files, allowedMentions: { parse: [] } })
-    .then(() => true)
     .catch((error) => {
       console.error('Failed to relay staff message to user DM:', error);
-      return false;
+      return null;
     });
 
+  const sent = Boolean(sentMessage);
+
   await reactToMessage(message, sent);
+
+  if (sentMessage) {
+    await db.addRelayedMessage({
+      sourceMessageId: message.id,
+      sourceChannelId: message.channel.id,
+      relayedMessageId: sentMessage.id,
+      relayedChannelId: sentMessage.channel.id,
+      direction: 'thread_to_dm',
+    });
+  }
 
   if (sent) {
     await db.touchTicketForUser(userId);
   }
+};
+
+const EDITED_SUFFIX = '\n*(edited)*';
+
+const handleDmMessageEdit = async (message) => {
+  const { author } = message;
+  if (!author || author.bot) return;
+
+  const mapping = db.getRelayedMessageBySourceId(message.id);
+  if (!mapping || mapping.direction !== 'dm_to_thread') return;
+
+  const thread = await client.channels.fetch(mapping.relayedChannelId).catch(() => null);
+  if (!thread || !thread.isThread?.()) return;
+
+  const relayedMessage = await thread.messages.fetch(mapping.relayedMessageId).catch(() => null);
+  if (!relayedMessage) return;
+
+  await relayedMessage
+    .edit({
+      content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}${EDITED_SUFFIX}`,
+      allowedMentions: { parse: [] },
+    })
+    .catch((error) => {
+      console.error('Failed to sync edited DM message to thread:', error);
+    });
+};
+
+const handleStaffThreadMessageEdit = async (message) => {
+  if (!isModmailThread(message.channel)) return;
+  if (!isStaffMember(message.member)) return;
+
+  const mapping = db.getRelayedMessageBySourceId(message.id);
+  if (!mapping || mapping.direction !== 'thread_to_dm') return;
+
+  const dmChannel = await client.channels.fetch(mapping.relayedChannelId).catch(() => null);
+  if (!dmChannel) return;
+
+  const relayedMessage = await dmChannel.messages.fetch(mapping.relayedMessageId).catch(() => null);
+  if (!relayedMessage) return;
+
+  const staffName = message.member?.displayName ?? message.author.username;
+  const hasText = message.content && message.content.trim().length > 0;
+  const content = hasText
+    ? `**${staffName}:** ${message.content.trim()}${EDITED_SUFFIX}`
+    : `**${staffName} sent an attachment.**`;
+
+  await relayedMessage.edit({ content, allowedMentions: { parse: [] } }).catch((error) => {
+    console.error('Failed to sync edited staff message to DM:', error);
+  });
 };
 
 const handleStaffSlashCommand = async (interaction) => {
@@ -1120,6 +1203,32 @@ client.on('interactionCreate', async (interaction) => {
         flags: MessageFlags.Ephemeral,
       })
       .catch(() => null);
+  }
+});
+
+client.on('messageUpdate', async (oldMessage, newMessage) => {
+  try {
+    if (newMessage.partial) {
+      newMessage = await newMessage.fetch().catch(() => null);
+      if (!newMessage) return;
+    }
+
+    if (newMessage.author?.bot) return;
+
+    // Skip updates that don't actually change the text (e.g. Discord adding a link preview embed).
+    if (!oldMessage.partial && newMessage.content === oldMessage.content) return;
+
+    if (!newMessage.guild && newMessage.channel.type === ChannelType.DM) {
+      await handleDmMessageEdit(newMessage);
+      return;
+    }
+
+    if (newMessage.guild && isModmailThread(newMessage.channel)) {
+      await handleStaffThreadMessageEdit(newMessage);
+      return;
+    }
+  } catch (error) {
+    console.error('messageUpdate handler error:', error);
   }
 });
 
