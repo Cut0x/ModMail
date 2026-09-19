@@ -3,6 +3,8 @@ const { mapTicket, boolToInt } = require('./mappers');
 const createTicketsApi = (ctx) => {
   const getTicketByUserId = (userId) => mapTicket(ctx.statements.getTicketByUserId.get(userId));
 
+  const getTicketByThreadId = (threadId) => mapTicket(ctx.statements.getTicketByThreadId.get(threadId));
+
   const getUserIdByThreadId = (threadId) => ctx.statements.getUserIdByThreadId.get(threadId)?.userId ?? null;
 
   const upsertTicket = async ({ userId, threadId, guildId, welcomed = false }) => {
@@ -31,6 +33,16 @@ const createTicketsApi = (ctx) => {
     return getTicketByUserId(userId);
   };
 
+  const markTicketMemberLeft = async (userId) => {
+    ctx.statements.markTicketMemberLeft.run(userId);
+    return getTicketByUserId(userId);
+  };
+
+  const clearTicketMemberLeft = async (userId) => {
+    ctx.statements.clearTicketMemberLeft.run(userId);
+    return getTicketByUserId(userId);
+  };
+
   const closeTicketByThreadId = async ({ threadId, closedBy }) => {
     const ticket = mapTicket(ctx.statements.getTicketByThreadId.get(threadId));
     if (!ticket) return null;
@@ -55,10 +67,13 @@ const createTicketsApi = (ctx) => {
 
   return {
     getTicketByUserId,
+    getTicketByThreadId,
     getUserIdByThreadId,
     upsertTicket,
     touchTicketForUser,
     markTicketWelcomed,
+    markTicketMemberLeft,
+    clearTicketMemberLeft,
     closeTicketByThreadId,
   };
 };

@@ -6,8 +6,15 @@ const handleStaffThreadMessage = async (message) => {
   if (!isModmailThread(message.channel)) return;
   if (!isStaffMember(message.member)) return;
 
-  const userId = db.getUserIdByThreadId(message.channel.id);
-  if (!userId) return;
+  const ticket = db.getTicketByThreadId(message.channel.id);
+  if (!ticket) return;
+
+  const userId = ticket.userId;
+
+  if (ticket.memberLeft) {
+    await reactToMessage(message, false);
+    return;
+  }
 
   const targetUser = await client.users.fetch(userId).catch(() => null);
   if (!targetUser) {

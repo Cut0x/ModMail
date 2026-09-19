@@ -4,6 +4,8 @@ const { registerMessageCreateEvent } = require('./messageCreate');
 const { registerMessageUpdateEvent } = require('./messageUpdate');
 const { registerTypingStartEvent } = require('./typingStart');
 const { registerInteractionCreateEvent } = require('./interactionCreate');
+const { registerGuildMemberRemoveEvent } = require('./guildMemberRemove');
+const { registerGuildMemberAddEvent } = require('./guildMemberAdd');
 
 const registerEvents = () => {
   registerReadyEvent();
@@ -11,6 +13,8 @@ const registerEvents = () => {
   registerMessageUpdateEvent();
   registerTypingStartEvent();
   registerInteractionCreateEvent();
+  registerGuildMemberRemoveEvent();
+  registerGuildMemberAddEvent();
 
   client.on('error', (error) => {
     console.error('Discord client error:', error);

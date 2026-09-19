@@ -93,6 +93,7 @@ Use `npm run dev` during development: it restarts automatically on file changes 
 Enable in the Developer Portal → Bot:
 
 - **Message Content Intent**
+- **Server Members Intent** *(required to detect when a member leaves the server while their ticket is open)*
 
 Recommended permissions when inviting the bot:
 
@@ -103,8 +104,6 @@ Recommended permissions when inviting the bot:
 - Read Message History
 - Attach Files
 - Use External Emojis *(optional, for custom reaction emojis)*
-
-Server Members intent is **not** required.
 
 ## Commands
 

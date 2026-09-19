@@ -16,7 +16,8 @@ const createSchema = (db) => {
       opened_at TEXT NOT NULL,
       last_message_at TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',
-      welcomed INTEGER NOT NULL DEFAULT 0
+      welcomed INTEGER NOT NULL DEFAULT 0,
+      member_left INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE INDEX IF NOT EXISTS idx_tickets_thread_id ON tickets(thread_id);
@@ -83,6 +84,13 @@ const createSchema = (db) => {
 
   if (!hasClosedDmMessage) {
     db.exec(`ALTER TABLE ticket_panels ADD COLUMN dm_closed_message TEXT NOT NULL DEFAULT '${DEFAULT_DM_CLOSED_MESSAGE}'`);
+  }
+
+  const ticketColumns = db.prepare('PRAGMA table_info(tickets)').all();
+  const hasMemberLeft = ticketColumns.some((column) => column.name === 'member_left');
+
+  if (!hasMemberLeft) {
+    db.exec('ALTER TABLE tickets ADD COLUMN member_left INTEGER NOT NULL DEFAULT 0');
   }
 };
 
