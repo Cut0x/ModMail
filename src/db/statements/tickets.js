@@ -7,7 +7,8 @@ const prepareTicketStatements = (db) => ({
       opened_at AS openedAt,
       last_message_at AS lastMessageAt,
       status,
-      welcomed
+      welcomed,
+      member_left AS memberLeft
     FROM tickets
     WHERE user_id = ?
   `),
@@ -19,7 +20,8 @@ const prepareTicketStatements = (db) => ({
       opened_at AS openedAt,
       last_message_at AS lastMessageAt,
       status,
-      welcomed
+      welcomed,
+      member_left AS memberLeft
     FROM tickets
     WHERE thread_id = ?
   `),
@@ -36,6 +38,8 @@ const prepareTicketStatements = (db) => ({
   `),
   touchTicketForUser: db.prepare('UPDATE tickets SET last_message_at = ? WHERE user_id = ?'),
   markTicketWelcomed: db.prepare('UPDATE tickets SET welcomed = 1, last_message_at = ? WHERE user_id = ?'),
+  markTicketMemberLeft: db.prepare('UPDATE tickets SET member_left = 1 WHERE user_id = ?'),
+  clearTicketMemberLeft: db.prepare('UPDATE tickets SET member_left = 0 WHERE user_id = ?'),
   deleteTicketByUserId: db.prepare('DELETE FROM tickets WHERE user_id = ?'),
   insertClosedTicket: db.prepare(`
     INSERT INTO closed_tickets (

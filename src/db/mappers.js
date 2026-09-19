@@ -6,6 +6,7 @@ const mapTicket = (row) => {
   return {
     ...row,
     welcomed: intToBool(row.welcomed),
+    memberLeft: intToBool(row.memberLeft),
   };
 };
 
