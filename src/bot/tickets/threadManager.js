@@ -18,7 +18,13 @@ const getModmailParentChannel = async () => {
 
 const sendStaffControlPanel = async ({ thread, user }) => {
   const blocked = db.isBlocked(user.id);
-  await thread.send(buildControlPanelMessage({ user, blocked }));
+  const message = await thread.send(buildControlPanelMessage({ user, blocked }));
+
+  try {
+    await message.pin();
+  } catch (error) {
+    console.error('Failed to pin staff control panel message:', error);
+  }
 };
 
 const sendTicketAnnouncement = async ({ parentChannel, user }) => {
