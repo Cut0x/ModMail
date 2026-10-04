@@ -2,12 +2,14 @@ const { MessageFlags } = require('discord.js');
 const {
   CLOSE_MODAL_PREFIX,
   CLOSE_REASON_INPUT_ID,
+  SNIPPET_MODAL_PREFIX,
   TICKET_CONFIG_MODAL_PREFIX,
   TICKET_REASON_MODAL_PREFIX,
 } = require('../constants');
 const { isModmailThread, isStaffMember } = require('../helpers');
 const { handleTicketConfigModalSubmit } = require('../commands/ticketConfigCommand');
 const { handleTicketReasonModalSubmit } = require('../commands/ticketOpenFlow');
+const { handleSnippetModalSubmit } = require('../commands/snippetCommands');
 const { closeTicket } = require('../tickets/closeTicket');
 
 // Returns true once the interaction has been fully handled (including "silently ignored").
@@ -19,6 +21,12 @@ const routeModalInteraction = async (interaction) => {
 
   if (interaction.customId.startsWith(`${TICKET_REASON_MODAL_PREFIX}:`)) {
     await handleTicketReasonModalSubmit(interaction);
+    return true;
+  }
+
+  if (interaction.customId.startsWith(`${SNIPPET_MODAL_PREFIX}:`)) {
+    const encodedName = interaction.customId.slice(`${SNIPPET_MODAL_PREFIX}:`.length);
+    await handleSnippetModalSubmit(interaction, decodeURIComponent(encodedName));
     return true;
   }
 

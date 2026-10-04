@@ -31,9 +31,10 @@ A self-hosted Discord ModMail bot that lets your members DM the bot to open a pr
 - **Typing indicators**: typing in DM shows up as typing in the thread, and vice versa.
 - **Delivery reactions**: every relayed message gets a ✅ or ❌ reaction depending on whether delivery succeeded.
 - **Block / unblock**: staff can block a user from opening new tickets, right from buttons on the ticket control panel or with `/block` and `/unblock`.
+- **Saved replies**: `/snippet add|remove|list|send` lets staff store frequently used answers and send them to a ticket in one command, with autocomplete on saved names.
 - **Anti-spam auto-ignore**: a user who keeps DMing without answering the confirmation prompt gets automatically ignored, with an optional log channel.
 - **Components V2 control panel**: a rich control panel is posted in every thread (Close / Block / Unblock buttons).
-- **SQLite persistence**: tickets, panels, blocklist and message mappings survive restarts; upgrading the bot never touches or drops existing data (new tables are additive only).
+- **SQLite persistence**: tickets, panels, blocklist, saved replies and message mappings survive restarts; upgrading the bot never touches or drops existing data (new tables are additive only).
 - **Legacy JSON import**: if you're migrating from an older JSON-based version, it's imported automatically the first time the SQLite database is empty.
 
 ## Getting started
@@ -114,6 +115,10 @@ Recommended permissions when inviting the bot:
 | `/close [reason]` | Closes the ticket and notifies the user |
 | `/block [reason]` | Blocks the user from opening new tickets |
 | `/unblock` | Unblocks the user |
+| `/snippet add name:<name>` | Opens a modal to create or update a saved reply |
+| `/snippet remove name:<name>` | Deletes a saved reply |
+| `/snippet list` | Lists all saved replies |
+| `/snippet send name:<name>` | Sends a saved reply to the ticket's user |
 | `/help` | Lists available commands |
 
 ### Admin
@@ -148,7 +153,6 @@ Nothing here is planned or promised, these are just ideas for anyone who wants t
 - 🗑️ **Delete sync**: mirror message deletions the same way edits are now mirrored.
 - 📄 **Ticket transcripts**: export a closed ticket's conversation as HTML/Markdown when it closes.
 - 🏷️ **Tags / categories**: let staff label tickets (billing, bug report, etc.) for easier triage.
-- 💬 **Canned responses**: a `/reply <snippet>` command for frequently used answers.
 - 🌍 **i18n**: translate bot-facing strings beyond the current English/French mix.
 - ⏱️ **SLA reminders**: ping staff if a ticket has gone unanswered for too long.
 - 🕵️ **Anonymous staff replies**: an option to sign replies as "Staff" instead of a display name.

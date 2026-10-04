@@ -9,6 +9,7 @@ const { createTicketsApi } = require('./tickets');
 const { createPanelsApi } = require('./panels');
 const { createBlocklistApi } = require('./blocklist');
 const { createRelayedMessagesApi } = require('./relayedMessages');
+const { createCannedResponsesApi } = require('./cannedResponses');
 const { createStateReader } = require('./state');
 const { importLegacyJsonIfNeeded } = require('./legacyImport');
 
@@ -27,6 +28,7 @@ function createDb(dbFilePath, options = {}) {
   const panels = createPanelsApi(ctx);
   const blocklist = createBlocklistApi(ctx);
   const relayedMessages = createRelayedMessagesApi(ctx);
+  const cannedResponses = createCannedResponsesApi(ctx);
   const getState = createStateReader(ctx);
 
   const load = async () => {
@@ -49,6 +51,7 @@ function createDb(dbFilePath, options = {}) {
     ...panels,
     ...blocklist,
     ...relayedMessages,
+    ...cannedResponses,
     getState,
     dbPath: absolutePath,
   };

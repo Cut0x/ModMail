@@ -1,15 +1,28 @@
 const { MessageFlags } = require('discord.js');
-const { CONFIG_TICKET_COMMAND_NAME } = require('../constants');
+const { CONFIG_TICKET_COMMAND_NAME, SNIPPET_COMMAND_NAME } = require('../constants');
 const { handleStaffSlashCommand } = require('../commands/staffCommands');
 const { handleTicketConfigCommand } = require('../commands/ticketConfigCommand');
+const { handleSnippetCommand, handleSnippetAutocomplete } = require('../commands/snippetCommands');
 const { routeButtonInteraction } = require('./buttonRouter');
 const { routeModalInteraction } = require('./modalRouter');
 
 const handleInteractionCreate = async (interaction) => {
   try {
+    if (interaction.isAutocomplete()) {
+      if (interaction.commandName === SNIPPET_COMMAND_NAME) {
+        await handleSnippetAutocomplete(interaction);
+      }
+      return;
+    }
+
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === CONFIG_TICKET_COMMAND_NAME) {
         await handleTicketConfigCommand(interaction);
+        return;
+      }
+
+      if (interaction.commandName === SNIPPET_COMMAND_NAME) {
+        await handleSnippetCommand(interaction);
         return;
       }
 

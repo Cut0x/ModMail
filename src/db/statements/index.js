@@ -2,6 +2,7 @@ const { prepareTicketStatements } = require('./tickets');
 const { preparePanelStatements } = require('./panels');
 const { prepareBlocklistStatements } = require('./blocklist');
 const { prepareRelayedMessageStatements } = require('./relayedMessages');
+const { prepareCannedResponseStatements } = require('./cannedResponses');
 
 const prepareStatements = (db) => ({
   countRows: db.prepare(`
@@ -10,12 +11,14 @@ const prepareStatements = (db) => ({
       (SELECT COUNT(*) FROM ticket_panels) +
       (SELECT COUNT(*) FROM blocked_users) +
       (SELECT COUNT(*) FROM spam_ignored_users) +
-      (SELECT COUNT(*) FROM closed_tickets) AS total
+      (SELECT COUNT(*) FROM closed_tickets) +
+      (SELECT COUNT(*) FROM canned_responses) AS total
   `),
   ...prepareTicketStatements(db),
   ...preparePanelStatements(db),
   ...prepareBlocklistStatements(db),
   ...prepareRelayedMessageStatements(db),
+  ...prepareCannedResponseStatements(db),
 });
 
 module.exports = { prepareStatements };

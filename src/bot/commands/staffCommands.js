@@ -28,7 +28,13 @@ const handleStaffSlashCommand = async (interaction) => {
 
   if (interaction.commandName === 'help') {
     await interaction.reply({
-      content: ['/close [reason]', '/block [reason]', '/unblock', '/help'].join('\n'),
+      content: [
+        '/close [reason]',
+        '/block [reason]',
+        '/unblock',
+        '/snippet add|remove|list|send',
+        '/help',
+      ].join('\n'),
       flags: MessageFlags.Ephemeral,
     });
     return;

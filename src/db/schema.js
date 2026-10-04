@@ -77,6 +77,14 @@ const createSchema = (db) => {
       direction TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS canned_responses (
+      name TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   const panelColumns = db.prepare('PRAGMA table_info(ticket_panels)').all();

@@ -23,7 +23,7 @@ const registerReadyEvent = () => {
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`ModMail guild: ${guild.name} (${guild.id})`);
     console.log(`SQLite DB: ${db.dbPath}`);
-    console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /help');
+    console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /snippet, /help');
     if (config.botActivityPlaying) {
       console.log(`Bot activity: Playing ${config.botActivityPlaying}`);
     }
