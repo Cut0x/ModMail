@@ -1,5 +1,6 @@
 const { ChannelType, PermissionsBitField, SlashCommandBuilder } = require('discord.js');
-const { CONFIG_TICKET_COMMAND_NAME, SNIPPET_COMMAND_NAME } = require('../constants');
+const { CONFIG_TICKET_COMMAND_NAME, SNIPPET_COMMAND_NAME, SETLANG_COMMAND_NAME } = require('../constants');
+const { SUPPORTED_LOCALES, LOCALE_NAMES } = require('../../i18n');
 
 const buildSlashCommands = () => [
   new SlashCommandBuilder()
@@ -78,6 +79,17 @@ const buildSlashCommands = () => [
             .setRequired(true)
             .setAutocomplete(true),
         ),
+    ),
+  new SlashCommandBuilder()
+    .setName(SETLANG_COMMAND_NAME)
+    .setDescription('Set the language used by the bot for its messages')
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+    .addStringOption((option) =>
+      option
+        .setName('locale')
+        .setDescription('Language to use')
+        .setRequired(true)
+        .addChoices(...SUPPORTED_LOCALES.map((locale) => ({ name: LOCALE_NAMES[locale], value: locale }))),
     ),
 ].map((command) => command.toJSON());
 

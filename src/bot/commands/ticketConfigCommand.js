@@ -2,6 +2,7 @@ const { MessageFlags } = require('discord.js');
 const { randomUUID } = require('node:crypto');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isAdministrator } = require('../helpers');
 const { buildTicketConfigModal, buildTicketPanelMessage } = require('../ui/ticketPanelUi');
 const { TICKET_CONFIG_INPUT_IDS } = require('../constants');
@@ -11,7 +12,7 @@ const handleTicketConfigCommand = async (interaction) => {
 
   if (!isAdministrator(interaction.member)) {
     await interaction.reply({
-      content: 'You need the Administrator permission to use this command.',
+      content: t('ticketPanelAdmin.needAdminCommand'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -25,7 +26,7 @@ const handleTicketConfigCommand = async (interaction) => {
     typeof targetChannel.send !== 'function'
   ) {
     await interaction.reply({
-      content: 'I could not use that channel as a ticket panel channel.',
+      content: t('ticketPanelAdmin.invalidChannel'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -42,7 +43,7 @@ const handleTicketConfigModalSubmit = async (interaction) => {
 
   if (!isAdministrator(interaction.member)) {
     await interaction.reply({
-      content: 'You need the Administrator permission to use this action.',
+      content: t('ticketPanelAdmin.needAdminAction'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -68,7 +69,7 @@ const handleTicketConfigModalSubmit = async (interaction) => {
     typeof targetChannel.send !== 'function'
   ) {
     await interaction.editReply({
-      content: 'I could not find a text channel from this server with that value.',
+      content: t('ticketPanelAdmin.channelNotFound'),
     });
     return;
   }
@@ -85,7 +86,7 @@ const handleTicketConfigModalSubmit = async (interaction) => {
     );
   } catch {
     await interaction.editReply({
-      content: `I could not send the ticket panel in <#${targetChannel.id}>. Check my permissions in that channel.`,
+      content: t('ticketPanelAdmin.sendFailed', { channelId: targetChannel.id }),
     });
     return;
   }
@@ -102,7 +103,7 @@ const handleTicketConfigModalSubmit = async (interaction) => {
   });
 
   await interaction.editReply({
-    content: `Ticket panel sent in <#${targetChannel.id}>.`,
+    content: t('ticketPanelAdmin.panelSent', { channelId: targetChannel.id }),
   });
 };
 

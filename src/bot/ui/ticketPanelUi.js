@@ -13,51 +13,52 @@ const {
   TICKET_REASON_INPUT_ID,
   TICKET_REASON_MODAL_PREFIX,
 } = require('../constants');
+const { t } = require('../../i18n');
 
 const buildTicketConfigModal = ({ panelId, channelId }) => {
   const titleInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.title)
-    .setLabel('Panel title')
+    .setLabel(t('ticketPanelAdmin.titleLabel'))
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(100)
-    .setPlaceholder('Open a support ticket');
+    .setPlaceholder(t('ticketPanelAdmin.titlePlaceholder'));
 
   const descriptionInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.description)
-    .setLabel('Panel description')
+    .setLabel(t('ticketPanelAdmin.descriptionLabel'))
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(1800)
-    .setPlaceholder('Click the button below to contact support.');
+    .setPlaceholder(t('ticketPanelAdmin.descriptionPlaceholder'));
 
   const buttonTextInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.buttonText)
-    .setLabel('Button text')
+    .setLabel(t('ticketPanelAdmin.buttonTextLabel'))
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(80)
-    .setPlaceholder('Open ticket');
+    .setPlaceholder(t('ticketPanelAdmin.buttonTextPlaceholder'));
 
   const dmMessageInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.dmMessage)
-    .setLabel('DM message after ticket opens')
+    .setLabel(t('ticketPanelAdmin.dmMessageLabel'))
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(1800)
-    .setPlaceholder('Your ticket is open. To talk with support, send your messages here.');
+    .setPlaceholder(t('ticketPanelAdmin.dmMessagePlaceholder'));
 
   const dmClosedMessageInput = new TextInputBuilder()
     .setCustomId(TICKET_CONFIG_INPUT_IDS.dmClosedMessage)
-    .setLabel('Message when DMs are closed')
+    .setLabel(t('ticketPanelAdmin.dmClosedMessageLabel'))
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(1800)
-    .setPlaceholder('Vos messages privés sont fermés.');
+    .setPlaceholder(t('ticketPanelAdmin.dmClosedMessagePlaceholder'));
 
   return new ModalBuilder()
     .setCustomId(`${TICKET_CONFIG_MODAL_PREFIX}:${panelId}:${channelId}`)
-    .setTitle('Configure ticket panel')
+    .setTitle(t('ticketPanelAdmin.modalTitle'))
     .addComponents(
       new ActionRowBuilder().addComponents(titleInput),
       new ActionRowBuilder().addComponents(descriptionInput),
@@ -83,15 +84,15 @@ const buildTicketPanelMessage = ({ panelId, title, description, buttonText }) =>
 const buildTicketReasonModal = (panelId) => {
   const reasonInput = new TextInputBuilder()
     .setCustomId(TICKET_REASON_INPUT_ID)
-    .setLabel('Ticket reason')
+    .setLabel(t('ticketOpen.reasonLabel'))
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(1000)
-    .setPlaceholder('Explain why you are opening this ticket.');
+    .setPlaceholder(t('ticketOpen.reasonPlaceholder'));
 
   return new ModalBuilder()
     .setCustomId(`${TICKET_REASON_MODAL_PREFIX}:${panelId}`)
-    .setTitle('Open a support ticket')
+    .setTitle(t('ticketOpen.reasonModalTitle'))
     .addComponents(new ActionRowBuilder().addComponents(reasonInput));
 };
 

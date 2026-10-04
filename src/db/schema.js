@@ -85,6 +85,11 @@ const createSchema = (db) => {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS bot_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   const panelColumns = db.prepare('PRAGMA table_info(ticket_panels)').all();

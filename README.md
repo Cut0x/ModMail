@@ -32,9 +32,10 @@ A self-hosted Discord ModMail bot that lets your members DM the bot to open a pr
 - **Delivery reactions**: every relayed message gets a ✅ or ❌ reaction depending on whether delivery succeeded.
 - **Block / unblock**: staff can block a user from opening new tickets, right from buttons on the ticket control panel or with `/block` and `/unblock`.
 - **Saved replies**: `/snippet add|remove|list|send` lets staff store frequently used answers and send them to a ticket in one command, with autocomplete on saved names.
+- **i18n**: every bot-generated message (errors, buttons, confirmations, control panel, etc.) is translated, with `/setlang` letting an admin switch the bot's language (English/French) at runtime, no restart needed.
 - **Anti-spam auto-ignore**: a user who keeps DMing without answering the confirmation prompt gets automatically ignored, with an optional log channel.
 - **Components V2 control panel**: a rich control panel is posted in every thread (Close / Block / Unblock buttons).
-- **SQLite persistence**: tickets, panels, blocklist, saved replies and message mappings survive restarts; upgrading the bot never touches or drops existing data (new tables are additive only).
+- **SQLite persistence**: tickets, panels, blocklist, saved replies, bot settings and message mappings survive restarts; upgrading the bot never touches or drops existing data (new tables are additive only).
 - **Legacy JSON import**: if you're migrating from an older JSON-based version, it's imported automatically the first time the SQLite database is empty.
 
 ## Getting started
@@ -126,6 +127,7 @@ Recommended permissions when inviting the bot:
 | Command | Description |
 | --- | --- |
 | `/config-ticket channel:#channel` | Configures and sends a public ticket-opening panel (requires `Administrator`) |
+| `/setlang locale:<English\|Français>` | Sets the bot's language for all its messages (requires `Administrator`) |
 
 ## Project structure
 
@@ -133,7 +135,8 @@ Recommended permissions when inviting the bot:
 src/
 ├── config.js        # Environment variables & validation
 ├── index.js          # Entry point, wires everything and logs in
-├── db/                # SQLite persistence layer (tickets, panels, blocklist, relayed messages)
+├── i18n/              # Translated bot strings (en/fr) + the t()/setLocale() helpers
+├── db/                # SQLite persistence layer (tickets, panels, blocklist, relayed messages, settings)
 └── bot/
     ├── client.js       # Discord client instance
     ├── ui/             # Embeds, modals, buttons, slash command builders
@@ -153,7 +156,6 @@ Nothing here is planned or promised, these are just ideas for anyone who wants t
 - 🗑️ **Delete sync**: mirror message deletions the same way edits are now mirrored.
 - 📄 **Ticket transcripts**: export a closed ticket's conversation as HTML/Markdown when it closes.
 - 🏷️ **Tags / categories**: let staff label tickets (billing, bug report, etc.) for easier triage.
-- 🌍 **i18n**: translate bot-facing strings beyond the current English/French mix.
 - ⏱️ **SLA reminders**: ping staff if a ticket has gone unanswered for too long.
 - 🕵️ **Anonymous staff replies**: an option to sign replies as "Staff" instead of a display name.
 - 🐳 **Docker support**: a `Dockerfile` + `docker-compose.yml` for easier self-hosting.

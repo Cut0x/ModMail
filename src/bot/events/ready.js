@@ -2,12 +2,14 @@ const { Events, ActivityType } = require('discord.js');
 const { config } = require('../../config');
 const { client } = require('../client');
 const { db } = require('../db');
+const { loadLocale } = require('../../i18n');
 const { getModmailParentChannel } = require('../tickets/threadManager');
 const { registerSlashCommands } = require('../ui/slashCommands');
 
 const registerReadyEvent = () => {
   client.once(Events.ClientReady, async () => {
     await db.load();
+    const locale = loadLocale(db);
 
     const guild = await client.guilds.fetch(config.guildId).catch(() => null);
     if (!guild) {
@@ -23,7 +25,8 @@ const registerReadyEvent = () => {
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`ModMail guild: ${guild.name} (${guild.id})`);
     console.log(`SQLite DB: ${db.dbPath}`);
-    console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /snippet, /help');
+    console.log(`Bot locale: ${locale}`);
+    console.log('Slash commands registered: /config-ticket, /close, /block, /unblock, /snippet, /setlang, /help');
     if (config.botActivityPlaying) {
       console.log(`Bot activity: Playing ${config.botActivityPlaying}`);
     }

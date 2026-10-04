@@ -1,5 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { safeText } = require('../helpers');
 const { ensureThreadForUser } = require('../tickets/threadManager');
 const { buildTicketReasonModal } = require('../ui/ticketPanelUi');
@@ -11,7 +12,7 @@ const handleTicketOpenButton = async (interaction) => {
 
   if (!panel) {
     await interaction.reply({
-      content: 'This ticket panel is no longer configured.',
+      content: t('ticket.panelNotConfigured'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -19,7 +20,7 @@ const handleTicketOpenButton = async (interaction) => {
 
   if (db.isBlocked(interaction.user.id) || db.isSpamIgnored(interaction.user.id)) {
     await interaction.reply({
-      content: 'You cannot create a ticket at this time.',
+      content: t('common.cannotCreateTicketNow'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -40,14 +41,14 @@ const handleTicketReasonModalSubmit = async (interaction) => {
 
   if (!panel) {
     await interaction.editReply({
-      content: 'This ticket panel is no longer configured.',
+      content: t('ticket.panelNotConfigured'),
     });
     return;
   }
 
   if (db.isBlocked(interaction.user.id) || db.isSpamIgnored(interaction.user.id)) {
     await interaction.editReply({
-      content: 'You cannot create a ticket at this time.',
+      content: t('common.cannotCreateTicketNow'),
     });
     return;
   }
@@ -62,7 +63,7 @@ const handleTicketReasonModalSubmit = async (interaction) => {
   }
 
   await thread.send({
-    content: `**Ticket opened from panel**\nUser: <@${interaction.user.id}> (\`${interaction.user.id}\`)\nReason: ${safeText(reason)}`,
+    content: t('ticket.openedFromPanel', { userId: interaction.user.id, reason: safeText(reason) }),
     allowedMentions: { parse: [] },
   });
 
@@ -75,9 +76,7 @@ const handleTicketReasonModalSubmit = async (interaction) => {
     .catch(() => false);
 
   await interaction.editReply({
-    content: dmSent
-      ? 'Your ticket has been opened. Check your DMs to talk with support.'
-      : panel.dmClosedMessage,
+    content: dmSent ? t('ticket.openedConfirmation') : panel.dmClosedMessage,
   });
 };
 

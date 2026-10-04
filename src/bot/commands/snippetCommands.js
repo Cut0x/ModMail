@@ -1,6 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isModmailThread, isStaffMember, reactToMessage } = require('../helpers');
 const { SNIPPET_CONTENT_INPUT_ID } = require('../constants');
 const { buildSnippetModal } = require('../ui/snippetModal');
@@ -12,7 +13,7 @@ const handleSnippetCommand = async (interaction) => {
 
   if (!isStaffMember(interaction.member)) {
     await interaction.reply({
-      content: 'You are not allowed to use this command.',
+      content: t('common.notAllowedCommand'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -25,7 +26,7 @@ const handleSnippetCommand = async (interaction) => {
 
     if (!SNIPPET_NAME_PATTERN.test(name)) {
       await interaction.reply({
-        content: 'Saved reply names can only contain letters, numbers, dashes and underscores.',
+        content: t('snippet.nameInvalid'),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -41,7 +42,7 @@ const handleSnippetCommand = async (interaction) => {
     const removed = db.deleteCannedResponse(name);
 
     await interaction.reply({
-      content: removed ? `Saved reply "${removed.name}" has been deleted.` : `No saved reply named "${name}".`,
+      content: removed ? t('snippet.deleted', { name: removed.name }) : t('snippet.notFound', { name }),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -51,7 +52,7 @@ const handleSnippetCommand = async (interaction) => {
     const snippets = db.listCannedResponses();
     const content = snippets.length
       ? snippets.map((snippet) => `• **${snippet.name}**`).join('\n')
-      : 'No saved replies yet. Use /snippet add to create one.';
+      : t('snippet.emptyList');
 
     await interaction.reply({ content, flags: MessageFlags.Ephemeral });
     return;
@@ -60,7 +61,7 @@ const handleSnippetCommand = async (interaction) => {
   if (subcommand === 'send') {
     if (!interaction.channel || !isModmailThread(interaction.channel)) {
       await interaction.reply({
-        content: 'This command can only be used inside a ModMail thread.',
+        content: t('common.threadOnly'),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -68,20 +69,20 @@ const handleSnippetCommand = async (interaction) => {
 
     const ticket = db.getTicketByThreadId(interaction.channel.id);
     if (!ticket) {
-      await interaction.reply({ content: 'No user linked to this thread.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: t('common.noUserLinked'), flags: MessageFlags.Ephemeral });
       return;
     }
 
     const name = interaction.options.getString('name', true);
     const snippet = db.getCannedResponse(name);
     if (!snippet) {
-      await interaction.reply({ content: `No saved reply named "${name}".`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: t('snippet.notFound', { name }), flags: MessageFlags.Ephemeral });
       return;
     }
 
     if (ticket.memberLeft) {
       await interaction.reply({
-        content: 'This user has left the server; the message cannot be delivered.',
+        content: t('ticket.deliveryBlockedMemberLeft'),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -90,14 +91,14 @@ const handleSnippetCommand = async (interaction) => {
     const targetUser = await client.users.fetch(ticket.userId).catch(() => null);
     if (!targetUser) {
       await interaction.reply({
-        content: 'Cannot DM the target user (not found).',
+        content: t('common.cannotDmUser'),
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const staffName = interaction.member?.displayName ?? interaction.user.username;
-    const content = `**${staffName}:** ${snippet.content}`;
+    const content = t('relay.staffMessage', { staffName, content: snippet.content });
 
     await interaction.reply({ content, allowedMentions: { parse: [] } });
     const sentInThread = await interaction.fetchReply();
@@ -143,7 +144,7 @@ const handleSnippetAutocomplete = async (interaction) => {
 const handleSnippetModalSubmit = async (interaction, name) => {
   if (!isStaffMember(interaction.member)) {
     await interaction.reply({
-      content: 'You are not allowed to use this action.',
+      content: t('common.notAllowedAction'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -151,14 +152,14 @@ const handleSnippetModalSubmit = async (interaction, name) => {
 
   const content = interaction.fields.getTextInputValue(SNIPPET_CONTENT_INPUT_ID)?.trim();
   if (!content) {
-    await interaction.reply({ content: 'Saved reply content cannot be empty.', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: t('snippet.contentEmpty'), flags: MessageFlags.Ephemeral });
     return;
   }
 
   const snippet = await db.upsertCannedResponse({ name, content, createdBy: interaction.user.id });
 
   await interaction.reply({
-    content: `Saved reply "${snippet.name}" has been saved.`,
+    content: t('snippet.saved', { name: snippet.name }),
     flags: MessageFlags.Ephemeral,
   });
 };

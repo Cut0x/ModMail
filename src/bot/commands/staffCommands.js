@@ -1,6 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { STAFF_COMMAND_NAMES } = require('../constants');
 const { isModmailThread, isStaffMember } = require('../helpers');
 const { closeTicket } = require('../tickets/closeTicket');
@@ -12,7 +13,7 @@ const handleStaffSlashCommand = async (interaction) => {
 
   if (!interaction.channel || !isModmailThread(interaction.channel)) {
     await interaction.reply({
-      content: 'This command can only be used inside a ModMail thread.',
+      content: t('common.threadOnly'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -20,7 +21,7 @@ const handleStaffSlashCommand = async (interaction) => {
 
   if (!isStaffMember(interaction.member)) {
     await interaction.reply({
-      content: 'You are not allowed to use this command.',
+      content: t('common.notAllowedCommand'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -28,13 +29,7 @@ const handleStaffSlashCommand = async (interaction) => {
 
   if (interaction.commandName === 'help') {
     await interaction.reply({
-      content: [
-        '/close [reason]',
-        '/block [reason]',
-        '/unblock',
-        '/snippet add|remove|list|send',
-        '/help',
-      ].join('\n'),
+      content: t('help.list').join('\n'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -43,14 +38,14 @@ const handleStaffSlashCommand = async (interaction) => {
   const userId = db.getUserIdByThreadId(interaction.channel.id);
   if (!userId) {
     await interaction.reply({
-      content: 'No user linked to this thread.',
+      content: t('common.noUserLinked'),
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
   if (interaction.commandName === 'close') {
-    const reason = interaction.options.getString('reason')?.trim() || 'Closed by staff command.';
+    const reason = interaction.options.getString('reason')?.trim() || t('ticket.closedByCommandReason');
 
     const closed = await closeTicket({
       thread: interaction.channel,
@@ -59,7 +54,7 @@ const handleStaffSlashCommand = async (interaction) => {
     });
 
     await interaction.reply({
-      content: closed ? `Ticket closed for user ${userId}.` : 'Unable to close ticket.',
+      content: closed ? t('ticket.closedFor', { userId }) : t('ticket.closeFailed'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -82,7 +77,7 @@ const handleStaffSlashCommand = async (interaction) => {
     }
 
     await interaction.editReply({
-      content: `User ${userId} has been blocked.`,
+      content: t('block.blocked', { userId }),
     });
     return;
   }
@@ -96,7 +91,7 @@ const handleStaffSlashCommand = async (interaction) => {
     }
 
     await interaction.editReply({
-      content: `User ${userId} has been unblocked.`,
+      content: t('block.unblocked', { userId }),
     });
   }
 };

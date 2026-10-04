@@ -1,6 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { CONFIRM_PREFIX, TICKET_OPEN_BUTTON_PREFIX } = require('../constants');
 const { isModmailThread, isStaffMember } = require('../helpers');
 const { handleConfirmationButton } = require('../handlers/confirmationButton');
@@ -26,7 +27,7 @@ const routeButtonInteraction = async (interaction) => {
 
   if (!isStaffMember(interaction.member)) {
     await interaction
-      .reply({ content: 'You are not allowed to use this action.', flags: MessageFlags.Ephemeral })
+      .reply({ content: t('common.notAllowedAction'), flags: MessageFlags.Ephemeral })
       .catch(() => null);
     return true;
   }
@@ -44,7 +45,7 @@ const routeButtonInteraction = async (interaction) => {
     await db.blockUser({ userId, blockedBy: interaction.user.id });
     const user = await client.users.fetch(userId).catch(() => null);
     if (user) await sendStaffControlPanel({ thread: interaction.channel, user });
-    await interaction.editReply({ content: `User ${userId} has been blocked.` });
+    await interaction.editReply({ content: t('block.blocked', { userId }) });
     return true;
   }
 
@@ -52,7 +53,7 @@ const routeButtonInteraction = async (interaction) => {
     await db.unblockUser(userId);
     const user = await client.users.fetch(userId).catch(() => null);
     if (user) await sendStaffControlPanel({ thread: interaction.channel, user });
-    await interaction.editReply({ content: `User ${userId} has been unblocked.` });
+    await interaction.editReply({ content: t('block.unblocked', { userId }) });
     return true;
   }
 

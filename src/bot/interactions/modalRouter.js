@@ -7,6 +7,7 @@ const {
   TICKET_REASON_MODAL_PREFIX,
 } = require('../constants');
 const { isModmailThread, isStaffMember } = require('../helpers');
+const { t } = require('../../i18n');
 const { handleTicketConfigModalSubmit } = require('../commands/ticketConfigCommand');
 const { handleTicketReasonModalSubmit } = require('../commands/ticketOpenFlow');
 const { handleSnippetModalSubmit } = require('../commands/snippetCommands');
@@ -36,7 +37,7 @@ const routeModalInteraction = async (interaction) => {
 
   if (!isStaffMember(interaction.member)) {
     await interaction
-      .reply({ content: 'You are not allowed to use this action.', flags: MessageFlags.Ephemeral })
+      .reply({ content: t('common.notAllowedAction'), flags: MessageFlags.Ephemeral })
       .catch(() => null);
     return true;
   }
@@ -45,17 +46,17 @@ const routeModalInteraction = async (interaction) => {
 
   const [, , userId, expectedThreadId] = interaction.customId.split(':');
   if (interaction.channel.id !== expectedThreadId) {
-    await interaction.editReply({ content: 'This close action does not match the current thread.' });
+    await interaction.editReply({ content: t('ticket.closeActionMismatch') });
     return true;
   }
 
   const reasonInput = interaction.fields.getTextInputValue(CLOSE_REASON_INPUT_ID)?.trim();
-  const reason = reasonInput && reasonInput.length > 0 ? reasonInput : 'No reason provided.';
+  const reason = reasonInput && reasonInput.length > 0 ? reasonInput : t('common.noReasonProvided');
 
   const closed = await closeTicket({ thread: interaction.channel, closedBy: interaction.user.id, reason });
 
   await interaction.editReply({
-    content: closed ? `Ticket closed for user ${userId}.` : 'Unable to close ticket.',
+    content: closed ? t('ticket.closedFor', { userId }) : t('ticket.closeFailed'),
   });
   return true;
 };

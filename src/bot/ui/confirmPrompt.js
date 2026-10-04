@@ -1,19 +1,20 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { CONFIRM_PREFIX } = require('../constants');
+const { t } = require('../../i18n');
 
 const buildConfirmMessage = (userId) => {
   const yesButton = new ButtonBuilder()
     .setCustomId(`${CONFIRM_PREFIX}:yes:${userId}`)
-    .setLabel('Yes')
+    .setLabel(t('confirm.yes'))
     .setStyle(ButtonStyle.Success);
 
   const noButton = new ButtonBuilder()
     .setCustomId(`${CONFIRM_PREFIX}:no:${userId}`)
-    .setLabel('No')
+    .setLabel(t('confirm.no'))
     .setStyle(ButtonStyle.Danger);
 
   return {
-    content: 'Do you want to create a ticket with the staff team?',
+    content: t('confirm.prompt'),
     components: [new ActionRowBuilder().addComponents(yesButton, noButton)],
   };
 };
