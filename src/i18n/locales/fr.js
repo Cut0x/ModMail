@@ -47,6 +47,8 @@ module.exports = {
     openedConfirmation: 'Votre ticket a été ouvert. Consultez vos MP pour échanger avec le support.',
     panelNotConfigured: "Ce panneau de ticket n'est plus configuré.",
     announcement: '{mentionPrefix}Nouveau ticket ModMail de **{tag}** (`{id}`).',
+    transcriptDm: 'Voici une transcription de votre conversation.',
+    transcriptAttached: 'Transcription du ticket jointe.',
   },
 
   confirm: {

@@ -33,6 +33,7 @@ A self-hosted Discord ModMail bot that lets your members DM the bot to open a pr
 - **Block / unblock**: staff can block a user from opening new tickets, right from buttons on the ticket control panel or with `/block` and `/unblock`.
 - **Saved replies**: `/snippet add|remove|list|send` lets staff store frequently used answers and send them to a ticket in one command, with autocomplete on saved names.
 - **i18n**: every bot-generated message (errors, buttons, confirmations, control panel, etc.) is translated, with `/setlang` letting an admin switch the bot's language (English/French) at runtime, no restart needed.
+- **Ticket transcripts**: closing a ticket generates an HTML transcript of the whole thread, attached in the thread, sent to the user by DM, and saved to disk so it survives even if the thread is later deleted.
 - **Anti-spam auto-ignore**: a user who keeps DMing without answering the confirmation prompt gets automatically ignored, with an optional log channel.
 - **Components V2 control panel**: a rich control panel is posted in every thread (Close / Block / Unblock buttons).
 - **SQLite persistence**: tickets, panels, blocklist, saved replies, bot settings and message mappings survive restarts; upgrading the bot never touches or drops existing data (new tables are additive only).
@@ -86,6 +87,7 @@ Use `npm run dev` during development: it restarts automatically on file changes 
 | `THREAD_AUTO_ARCHIVE_MINUTES` | `60`, `1440`, `4320` or `10080` | `1440` |
 | `MODMAIL_SQLITE_FILE` | Path to the SQLite database file | `./data/modmail.sqlite` |
 | `MODMAIL_DB_FILE` | Legacy JSON file, imported automatically once if the SQLite DB is empty | `./data/modmail.json` |
+| `MODMAIL_TRANSCRIPTS_DIR` | Folder where HTML ticket transcripts are saved on close | `./data/transcripts` |
 | `LOGS_IGNORED_MP_USER_CHANNEL` | Channel where auto-ignored DM spammers are logged | *(none)* |
 | `REACTION_SUCCESS_EMOJI` | Reaction added when a message is relayed successfully (unicode or `<:name:id>`) | `✅` |
 | `REACTION_FAILURE_EMOJI` | Reaction added when relaying fails | `❌` |
@@ -140,7 +142,7 @@ src/
 └── bot/
     ├── client.js       # Discord client instance
     ├── ui/             # Embeds, modals, buttons, slash command builders
-    ├── tickets/        # Thread lifecycle (create, close)
+    ├── tickets/        # Thread lifecycle (create, close, transcript generation)
     ├── handlers/       # DM / staff message relay + edit sync
     ├── commands/       # Slash command & modal logic
     ├── interactions/   # Button / modal routing
@@ -154,7 +156,6 @@ The codebase is kept intentionally split into small, single-purpose files (each 
 Nothing here is planned or promised, these are just ideas for anyone who wants to open a PR:
 
 - 🗑️ **Delete sync**: mirror message deletions the same way edits are now mirrored.
-- 📄 **Ticket transcripts**: export a closed ticket's conversation as HTML/Markdown when it closes.
 - 🏷️ **Tags / categories**: let staff label tickets (billing, bug report, etc.) for easier triage.
 - ⏱️ **SLA reminders**: ping staff if a ticket has gone unanswered for too long.
 - 🕵️ **Anonymous staff replies**: an option to sign replies as "Staff" instead of a display name.
