@@ -47,6 +47,8 @@ module.exports = {
     openedConfirmation: 'Your ticket has been opened. Check your DMs to talk with support.',
     panelNotConfigured: 'This ticket panel is no longer configured.',
     announcement: '{mentionPrefix}New ModMail ticket from **{tag}** (`{id}`).',
+    transcriptDm: 'Here is a transcript of your conversation.',
+    transcriptAttached: 'Ticket transcript attached.',
   },
 
   confirm: {

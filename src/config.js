@@ -32,6 +32,7 @@ const config = {
   threadAutoArchiveMinutes: allowedAutoArchive.has(parsedAutoArchive) ? parsedAutoArchive : 1440,
   dbFilePath: process.env.MODMAIL_SQLITE_FILE || path.join(__dirname, '..', 'data', 'modmail.sqlite'),
   legacyJsonFilePath: process.env.MODMAIL_DB_FILE || path.join(__dirname, '..', 'data', 'modmail.json'),
+  transcriptsDirPath: process.env.MODMAIL_TRANSCRIPTS_DIR || path.join(__dirname, '..', 'data', 'transcripts'),
   logsIgnoredMpUserChannelId: process.env.LOGS_IGNORED_MP_USER_CHANNEL || null,
   reactionSuccessEmoji: normalizeEmoji(process.env.REACTION_SUCCESS_EMOJI, '✅'),
   reactionFailureEmoji: normalizeEmoji(process.env.REACTION_FAILURE_EMOJI, '❌'),
