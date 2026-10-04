@@ -1,6 +1,7 @@
 const { Events } = require('discord.js');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isModmailThread } = require('../helpers');
 
 const registerGuildMemberRemoveEvent = () => {
@@ -15,9 +16,7 @@ const registerGuildMemberRemoveEvent = () => {
       await db.markTicketMemberLeft(member.id);
 
       await thread
-        .send(
-          `**${member.user?.tag ?? member.id}** has left the server. Messages sent in this thread will no longer be delivered to them. You can close this ticket.`,
-        )
+        .send(t('ticket.memberLeft', { tag: member.user?.tag ?? member.id }))
         .catch(() => null);
     } catch (error) {
       console.error('guildMemberRemove handler error:', error);

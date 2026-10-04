@@ -1,7 +1,8 @@
 const { PermissionsBitField } = require('discord.js');
 const { config } = require('../config');
+const { t } = require('../i18n');
 
-const safeText = (value) => (value && value.trim().length > 0 ? value : '(no text)');
+const safeText = (value) => (value && value.trim().length > 0 ? value : t('common.noText'));
 
 const reactToMessage = async (message, success) => {
   const emoji = success ? config.reactionSuccessEmoji : config.reactionFailureEmoji;

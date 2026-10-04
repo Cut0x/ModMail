@@ -1,6 +1,6 @@
 const { client } = require('../client');
 const { db } = require('../db');
-const { EDITED_SUFFIX } = require('../constants');
+const { t } = require('../../i18n');
 const { safeText, isModmailThread, isStaffMember } = require('../helpers');
 
 const handleDmMessageEdit = async (message) => {
@@ -18,7 +18,9 @@ const handleDmMessageEdit = async (message) => {
 
   await relayedMessage
     .edit({
-      content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}${EDITED_SUFFIX}`,
+      content:
+        t('relay.fromUser', { tag: author.tag, id: author.id, content: safeText(message.content) }) +
+        t('common.editedSuffix'),
       allowedMentions: { parse: [] },
     })
     .catch((error) => {
@@ -42,8 +44,8 @@ const handleStaffThreadMessageEdit = async (message) => {
   const staffName = message.member?.displayName ?? message.author.username;
   const hasText = message.content && message.content.trim().length > 0;
   const content = hasText
-    ? `**${staffName}:** ${message.content.trim()}${EDITED_SUFFIX}`
-    : `**${staffName} sent an attachment.**`;
+    ? t('relay.staffMessage', { staffName, content: message.content.trim() }) + t('common.editedSuffix')
+    : t('relay.staffAttachment', { staffName });
 
   await relayedMessage.edit({ content, allowedMentions: { parse: [] } }).catch((error) => {
     console.error('Failed to sync edited staff message to DM:', error);

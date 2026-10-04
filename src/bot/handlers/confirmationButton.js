@@ -1,5 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { pendingConfirmations } = require('../state');
 const { safeText } = require('../helpers');
 const { ensureThreadForUser } = require('../tickets/threadManager');
@@ -11,7 +12,7 @@ const handleConfirmationButton = async (interaction) => {
 
   if (interaction.user.id !== userId) {
     await interaction
-      .reply({ content: 'This confirmation does not belong to you.', flags: MessageFlags.Ephemeral })
+      .reply({ content: t('confirm.notYours'), flags: MessageFlags.Ephemeral })
       .catch(() => null);
     return;
   }
@@ -19,13 +20,13 @@ const handleConfirmationButton = async (interaction) => {
   const pending = pendingConfirmations.get(userId);
 
   if (!pending) {
-    await interaction.update({ content: 'This confirmation is no longer valid.', components: [] }).catch(() => null);
+    await interaction.update({ content: t('confirm.expired'), components: [] }).catch(() => null);
     return;
   }
 
   if (action === 'no') {
     pendingConfirmations.delete(userId);
-    await interaction.update({ content: 'Ticket creation cancelled.', components: [] }).catch(() => null);
+    await interaction.update({ content: t('confirm.cancelled'), components: [] }).catch(() => null);
     return;
   }
 
@@ -33,7 +34,7 @@ const handleConfirmationButton = async (interaction) => {
     if (db.isBlocked(userId) || db.isSpamIgnored(userId)) {
       pendingConfirmations.delete(userId);
       await interaction
-        .update({ content: 'You cannot create a ticket at this time.', components: [] })
+        .update({ content: t('common.cannotCreateTicketNow'), components: [] })
         .catch(() => null);
       return;
     }
@@ -51,7 +52,7 @@ const handleConfirmationButton = async (interaction) => {
     }
 
     const relayedMessage = await thread.send({
-      content: `**From ${user.tag}** (${user.id})\n${safeText(pending.originalContent)}`,
+      content: t('relay.fromUser', { tag: user.tag, id: user.id, content: safeText(pending.originalContent) }),
       files: pending.originalFiles,
       allowedMentions: { parse: [] },
     });
@@ -67,7 +68,7 @@ const handleConfirmationButton = async (interaction) => {
     }
 
     await interaction
-      .editReply({ content: 'Your message has been sent to the staff team. We will reply here soon.', components: [] })
+      .editReply({ content: t('confirm.messageSent'), components: [] })
       .catch(() => null);
   }
 };

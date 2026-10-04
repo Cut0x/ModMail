@@ -1,8 +1,10 @@
 const { MessageFlags } = require('discord.js');
-const { CONFIG_TICKET_COMMAND_NAME, SNIPPET_COMMAND_NAME } = require('../constants');
+const { CONFIG_TICKET_COMMAND_NAME, SNIPPET_COMMAND_NAME, SETLANG_COMMAND_NAME } = require('../constants');
+const { t } = require('../../i18n');
 const { handleStaffSlashCommand } = require('../commands/staffCommands');
 const { handleTicketConfigCommand } = require('../commands/ticketConfigCommand');
 const { handleSnippetCommand, handleSnippetAutocomplete } = require('../commands/snippetCommands');
+const { handleSetlangCommand } = require('../commands/setlangCommand');
 const { routeButtonInteraction } = require('./buttonRouter');
 const { routeModalInteraction } = require('./modalRouter');
 
@@ -26,6 +28,11 @@ const handleInteractionCreate = async (interaction) => {
         return;
       }
 
+      if (interaction.commandName === SETLANG_COMMAND_NAME) {
+        await handleSetlangCommand(interaction);
+        return;
+      }
+
       await handleStaffSlashCommand(interaction);
       return;
     }
@@ -37,13 +44,13 @@ const handleInteractionCreate = async (interaction) => {
     console.error('interactionCreate handler error:', error);
     if (interaction.deferred || interaction.replied) {
       await interaction
-        .followUp({ content: 'An error occurred while processing this action.', flags: MessageFlags.Ephemeral })
+        .followUp({ content: t('common.interactionError'), flags: MessageFlags.Ephemeral })
         .catch(() => null);
       return;
     }
 
     await interaction
-      .reply({ content: 'An error occurred while processing this action.', flags: MessageFlags.Ephemeral })
+      .reply({ content: t('common.interactionError'), flags: MessageFlags.Ephemeral })
       .catch(() => null);
   }
 };

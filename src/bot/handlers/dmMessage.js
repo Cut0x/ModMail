@@ -1,6 +1,7 @@
 const { client } = require('../client');
 const { db } = require('../db');
 const { config } = require('../../config');
+const { t } = require('../../i18n');
 const { pendingConfirmations } = require('../state');
 const { SPAM_THRESHOLD } = require('../constants');
 const { safeText, reactToMessage, attachmentFiles } = require('../helpers');
@@ -26,7 +27,7 @@ const handleDmMessage = async (message) => {
 
   if (db.isBlocked(author.id)) {
     await author
-      .send('You are currently blocked from this ModMail. Contact staff another way if needed.')
+      .send(t('block.blockedDm'))
       .catch(() => null);
     return;
   }
@@ -38,7 +39,7 @@ const handleDmMessage = async (message) => {
 
     const relayedMessage = await thread
       .send({
-        content: `**From ${author.tag}** (${author.id})\n${safeText(message.content)}`,
+        content: t('relay.fromUser', { tag: author.tag, id: author.id, content: safeText(message.content) }),
         files: attachmentFiles(message),
         allowedMentions: { parse: [] },
       })
@@ -63,7 +64,7 @@ const handleDmMessage = async (message) => {
 
     if (relayed && !db.getTicketByUserId(author.id)?.welcomed) {
       await author
-        .send('Your message has been sent to the staff team. We will reply here soon.')
+        .send(t('confirm.messageSent'))
         .catch(() => null);
 
       const ticket = db.getTicketByUserId(author.id);
@@ -86,7 +87,7 @@ const handleDmMessage = async (message) => {
       await db.addSpamIgnoredUser(author.id);
       await sendSpamIgnoreLog(author);
       await pending.confirmMessage
-        .edit({ content: 'You have been ignored for sending too many messages without responding.', components: [] })
+        .edit({ content: t('confirm.spamIgnored'), components: [] })
         .catch(() => null);
     }
 

@@ -1,5 +1,6 @@
 const { ChannelType } = require('discord.js');
 const { client } = require('../client');
+const { t } = require('../../i18n');
 const { isModmailThread } = require('../helpers');
 const { handleDmMessage } = require('../handlers/dmMessage');
 const { handleStaffThreadMessage } = require('../handlers/staffThreadMessage');
@@ -22,7 +23,7 @@ const registerMessageCreateEvent = () => {
       console.error('messageCreate handler error:', error);
       if (message.channel?.isDMBased?.()) {
         await message.author
-          .send('An internal error occurred while handling your message. Please try again later.')
+          .send(t('common.internalError'))
           .catch(() => null);
       }
     }

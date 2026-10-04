@@ -1,6 +1,7 @@
 const { Events } = require('discord.js');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isModmailThread } = require('../helpers');
 
 const registerGuildMemberAddEvent = () => {
@@ -15,9 +16,7 @@ const registerGuildMemberAddEvent = () => {
       await db.clearTicketMemberLeft(member.id);
 
       await thread
-        .send(
-          `**${member.user?.tag ?? member.id}** has rejoined the server. Messages sent in this thread will be delivered to them again.`,
-        )
+        .send(t('ticket.memberRejoined', { tag: member.user?.tag ?? member.id }))
         .catch(() => null);
     } catch (error) {
       console.error('guildMemberAdd handler error:', error);

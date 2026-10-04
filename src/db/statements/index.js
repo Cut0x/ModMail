@@ -3,6 +3,7 @@ const { preparePanelStatements } = require('./panels');
 const { prepareBlocklistStatements } = require('./blocklist');
 const { prepareRelayedMessageStatements } = require('./relayedMessages');
 const { prepareCannedResponseStatements } = require('./cannedResponses');
+const { prepareSettingsStatements } = require('./settings');
 
 const prepareStatements = (db) => ({
   countRows: db.prepare(`
@@ -19,6 +20,7 @@ const prepareStatements = (db) => ({
   ...prepareBlocklistStatements(db),
   ...prepareRelayedMessageStatements(db),
   ...prepareCannedResponseStatements(db),
+  ...prepareSettingsStatements(db),
 });
 
 module.exports = { prepareStatements };

@@ -1,13 +1,16 @@
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isModmailThread } = require('../helpers');
 
-const closeTicket = async ({ thread, closedBy, reason = 'No reason provided.' }) => {
+const closeTicket = async ({ thread, closedBy, reason }) => {
   if (!isModmailThread(thread)) return false;
+
+  const resolvedReason = reason ?? t('common.noReasonProvided');
 
   const userId = db.getUserIdByThreadId(thread.id);
   if (!userId) {
-    await thread.send('No active ticket mapping found for this thread.').catch(() => null);
+    await thread.send(t('ticket.noMappingFound')).catch(() => null);
     return false;
   }
 
@@ -15,7 +18,7 @@ const closeTicket = async ({ thread, closedBy, reason = 'No reason provided.' })
 
   if (user) {
     await user
-      .send(`Your ModMail ticket has been closed.\nReason: ${reason}`)
+      .send(t('ticket.closedMessageToUser', { reason: resolvedReason }))
       .catch(() => null);
   }
 
@@ -24,7 +27,7 @@ const closeTicket = async ({ thread, closedBy, reason = 'No reason provided.' })
     closedBy,
   });
 
-  await thread.send(`Ticket closed by <@${closedBy}>.\nReason: ${reason}`).catch(() => null);
+  await thread.send(t('ticket.closedMessageToThread', { closedBy, reason: resolvedReason })).catch(() => null);
 
   await thread.setArchived(true, `Closed by ${closedBy}`).catch(() => null);
   await thread.setLocked(true, `Closed by ${closedBy}`).catch(() => null);

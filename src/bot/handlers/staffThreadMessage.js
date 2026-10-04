@@ -1,5 +1,6 @@
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { isModmailThread, isStaffMember, attachmentFiles, reactToMessage } = require('../helpers');
 
 const handleStaffThreadMessage = async (message) => {
@@ -18,7 +19,7 @@ const handleStaffThreadMessage = async (message) => {
 
   const targetUser = await client.users.fetch(userId).catch(() => null);
   if (!targetUser) {
-    await message.reply('Cannot DM the target user (not found).');
+    await message.reply(t('common.cannotDmUser'));
     await reactToMessage(message, false);
     return;
   }
@@ -27,8 +28,8 @@ const handleStaffThreadMessage = async (message) => {
   const files = attachmentFiles(message);
   const hasText = message.content && message.content.trim().length > 0;
   const content = hasText
-    ? `**${staffName}:** ${message.content.trim()}`
-    : `**${staffName} sent an attachment.**`;
+    ? t('relay.staffMessage', { staffName, content: message.content.trim() })
+    : t('relay.staffAttachment', { staffName });
 
   const sentMessage = await targetUser
     .send({ content, files, allowedMentions: { parse: [] } })

@@ -2,6 +2,7 @@ const { ChannelType } = require('discord.js');
 const { config } = require('../../config');
 const { client } = require('../client');
 const { db } = require('../db');
+const { t } = require('../../i18n');
 const { AUTO_ARCHIVE_VALUES } = require('../constants');
 const { buildThreadName } = require('../helpers');
 const { buildControlPanelMessage } = require('../ui/controlPanel');
@@ -31,7 +32,7 @@ const sendTicketAnnouncement = async ({ parentChannel, user }) => {
   const mentionPrefix = config.staffRoleId ? `<@&${config.staffRoleId}> ` : '';
 
   return parentChannel.send({
-    content: `${mentionPrefix}New ModMail ticket from **${user.tag}** (\`${user.id}\`).`,
+    content: t('ticket.announcement', { mentionPrefix, tag: user.tag, id: user.id }),
     allowedMentions: config.staffRoleId ? { roles: [config.staffRoleId] } : { parse: [] },
   });
 };
