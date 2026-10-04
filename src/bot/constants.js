@@ -17,6 +17,9 @@ const TICKET_REASON_INPUT_ID = 'ticket_reason';
 const CONFIRM_PREFIX = 'modmail:confirm';
 const SPAM_THRESHOLD = 3;
 const EDITED_SUFFIX = '\n*(edited)*';
+const SNIPPET_COMMAND_NAME = 'snippet';
+const SNIPPET_MODAL_PREFIX = 'modmail:snippetadd';
+const SNIPPET_CONTENT_INPUT_ID = 'snippet_content';
 
 module.exports = {
   AUTO_ARCHIVE_VALUES,
@@ -32,4 +35,7 @@ module.exports = {
   CONFIRM_PREFIX,
   SPAM_THRESHOLD,
   EDITED_SUFFIX,
+  SNIPPET_COMMAND_NAME,
+  SNIPPET_MODAL_PREFIX,
+  SNIPPET_CONTENT_INPUT_ID,
 };
